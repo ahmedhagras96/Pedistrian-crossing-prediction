@@ -13,7 +13,7 @@ The goal of this project is to predict pedestrian crossing behavior using point 
 
 1. **Data Source**: Loki dataset's raw point cloud and 3D labels provide spatial pedestrian information.
 2. **3D Reconstruction**: The system processes raw 3D point clouds to extract meaningful pedestrian and environmental data.
-3. **Pedestrian Modeling**: The pedestrian's key points from the 3D reconstruction are directly used for modeling instead of avatar-based approaches.
+3. **Pedestrian Modeling**: The pedestrian's key points from the 3D labeld loki dataset extracted to use as model input
 4. **Feature Extraction**: Combines features from 2D pedestrian detections in images and 3D pedestrian key points.
 5. **Attention Mechanism**: Prioritizes key features relevant to crossing prediction.
 6. **Feature Fusion**: Combines inputs through a linear fusion head with attention layers for prediction.
@@ -24,7 +24,6 @@ The goal of this project is to predict pedestrian crossing behavior using point 
 ## Features
 
 - **Point Cloud Processing**: Reads and analyzes Loki dataset files.
-- **3D Pedestrian Localization**: Computes distances between pedestrians and the ego-car.
 - **Feature Extraction**: Captures dynamic human and environmental attributes from 2D and 3D data.
 - **Crossing Prediction**: Leverages a neural network with an attention mechanism for final predictions.
 
@@ -67,17 +66,13 @@ The system relies on three main inputs:
 
 ## How It Works
 
-1. **Distance Calculation**:
-   - Pedestrian positions are identified using their `track_id` in the 3D labels.
-   - Distance from the pedestrian's center to the ego-car is computed in 2D (ignoring `z`).
-
-2. **Prediction Pipeline**:
+1. **Prediction Pipeline**:
    - Processes raw point clouds.
    - Extracts features from 2D and 3D pedestrian representations.
    - Applies a feature fusion and attention pipeline.
    - Outputs the probability of crossing.
 
-3. **YOLO-LiDAR Fusion**:
+2. **YOLO-LiDAR Fusion**:
    - While not used in training due to known `track_id` mappings, this method is recommended for inference users to identify pedestrians in 2D and 3D environments.
 
 ---
@@ -89,14 +84,6 @@ The system relies on three main inputs:
    ```bash
    python main.py --data_path ./data --output_path ./results
    ```
-
----
-
-## Framework Overview
-
-The system architecture is visually depicted below:
-
-![Framework Design](./My%20Framework.png)
 
 ---
 
