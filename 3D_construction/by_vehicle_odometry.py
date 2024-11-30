@@ -8,6 +8,7 @@ from typing import List, Optional
 # from tqdm import tqdm
 
 
+#! Change values in this class to reflect real changes
 @dataclass
 class Config:
     frame_step: int = 2
@@ -18,6 +19,7 @@ class Config:
     background_color: List[float] = field(default_factory=lambda: [1, 1, 1])
 
 
+#! Do not update values in this class, they will not reflect real changes
 @dataclass
 class Arguments:
     scenario: str = 'scenario_000'
@@ -28,6 +30,7 @@ class Arguments:
     save_files: bool = True
 
 
+#! Change values in this class to reflect real changes
 def parse_arguments() -> Arguments:
     parser = argparse.ArgumentParser(description="Process and visualize vehicle point clouds.")
     parser.add_argument('--scenario', type=str, default='scenario_000', help='Scenario identifier')
