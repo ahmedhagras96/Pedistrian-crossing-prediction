@@ -16,7 +16,7 @@ class Config:
     voxel_size: float = 0.05
     use_downsampling: bool = True
     point_size: float = 3.0
-    background_color: List[float] = field(default_factory=lambda: [1, 1, 1])
+    background_color: List[float] = field(default_factory=lambda: [0.2, 0.2, 0.2])
 
 
 #! Do not update values in this class, they will not reflect real changes
@@ -38,7 +38,7 @@ def parse_arguments() -> Arguments:
                         help='Directory to save processed point cloud files (default: ./output_directory/)')
     parser.add_argument('--loki_path', type=str, default=os.path.join(os.path.dirname(__file__), '../LOKI/'),
                         help='Base path for the LOKI data (default: ../LOKI/)')
-    parser.add_argument('--max_frames', type=int, default=10, help='Maximum number of frames to process')
+    parser.add_argument('--max_frames', type=int, default=40, help='Maximum number of frames to process')
     parser.add_argument('--alignment_interval', type=int, default=10, help='Frames to keep for alignment')
     parser.add_argument('--save_files', default=True, action='store_true', help='Enable saving point clouds')
     args = parser.parse_args()
@@ -226,7 +226,7 @@ class PointCloudOdometryAligner:
             self.logger.debug("Open3D visualization window created")
 
             if environment_pc:
-                environment_pc.paint_uniform_color([0.5, 0.5, 0.5])  # Gray
+                # environment_pc.paint_uniform_color([0.5, 0.5, 0.5])  # Gray
                 vis.add_geometry(environment_pc)
                 self.logger.debug("Added environment point cloud to visualization")
 
@@ -256,8 +256,11 @@ class PointCloudOdometryAligner:
 
         # Pass 1: Identify the last frame where each object appears
         self.logger.info("Starting Pass 1: Identifying last appearances of objects")
-        frame_indices_pass1 = list(range(0, self.frames_max_threshold, self.frame_step))
-        frames_to_process_pass1 = min(len(frame_indices_pass1), self.max_frames)
+        start_frame = self.max_frames - self.alignment_interval
+        end_frame = start_frame + self.alignment_interval
+        logging.info(f"start_frame: {start_frame}, end_frame: {end_frame}")
+        frame_indices_pass1 = list(range(start_frame, end_frame, self.frame_step))
+        # frames_to_process_pass1 = min(len(frame_indices_pass1), self.max_frames)
 
         # with tqdm(total=frames_to_process_pass1, desc="Pass 1: Parsing Labels", unit="frame") as pbar:
         processed_frames = 0
@@ -275,7 +278,7 @@ class PointCloudOdometryAligner:
                         last_positions[track_id] = {'frame': frame_index, 'object': obj}
                     processed_frames += 1
                     # pbar.update(1)
-                    self.logger.debug(f"Processed labels for frame {frame_index}")
+                    self.logger.info(f"Processed labels for frame {frame_index}")
                 except Exception as e:
                     self.logger.error(f"Error parsing labels from {label_file}: {e}")
             else:
@@ -285,8 +288,11 @@ class PointCloudOdometryAligner:
 
         # Pass 2: Process the frames for alignment
         self.logger.info("Starting Pass 2: Processing frames for alignment")
-        frame_indices_pass2 = list(range(0, self.frames_max_threshold, self.frame_step))
-        frames_to_process_pass2 = self.max_frames
+        start_frame = self.max_frames - self.alignment_interval
+        end_frame = start_frame + self.alignment_interval
+        logging.info(f"start_frame: {start_frame}, end_frame: {end_frame}")
+        frame_indices_pass2 = list(range(start_frame, end_frame, self.frame_step))
+        # frames_to_process_pass2 = self.max_frames
 
         # with tqdm(total=frames_to_process_pass2, desc="Pass 2: Aligning Frames", unit="frame") as pbar:
         processed_frames = 0
@@ -305,7 +311,7 @@ class PointCloudOdometryAligner:
 
             try:
                 pc = o3d.io.read_point_cloud(pc_file)
-                self.logger.debug(f"Loaded point cloud from {pc_file}")
+                self.logger.info(f"Loaded point cloud from {pc_file}")
 
                 if self.use_downsampling:
                     pc = pc.voxel_down_sample(voxel_size=self.voxel_size)
