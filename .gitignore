@@ -1,3 +1,7 @@
+
+/LOKI
+/3D_construction/output_directory
+
 .venv
 *.csv
 label3d_modifying.py
