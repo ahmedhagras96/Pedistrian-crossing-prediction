@@ -1,92 +1,98 @@
-import math
 import os
+import math
+import pandas as pd
+import copy
+from utils import *
 
-def read_odometry(file_path):
-    """
-    Reads odometry data from a file and extracts ego-car position (x, y).
+
+def process_scenario(scenario_path, scenario_name):
+    frame_files = sorted(os.listdir(scenario_path))
+    odom_files = [f for f in frame_files if f.startswith("odom")]
+    label_files = [f for f in frame_files if f.startswith("label3d")]
     
-    Args:
-        file_path (str): Path to the odometry file.
+    results = []
+    previous_positions = {}
+    # to_remove_unknown = set()  # Track pedestrians with unknown movement to be removed later
+    pending_corrections = {}
+    perv_ego_postion = {}
+
+    for odom_file, label_file in zip(odom_files, label_files):
+        frame_id = int(odom_file.split("_")[1].split(".")[0])
+        odom_path = os.path.join(scenario_path, odom_file)
+        label_path = os.path.join(scenario_path, label_file)
+
+        ego_position = parse_odometry(odom_path)
+        pedestrians = parse_labels(label_path)
+
+        current_results = []
         
-    Returns:
-        tuple: Ego-car position (x, y).
-    """
-    with open(file_path, 'r') as file:
-        line = file.readline().strip().split(',')
-        pos_x, pos_y = float(line[0]), float(line[1])
-    return pos_x, pos_y
+        for ped_id, ped_data in pedestrians.items():
+            ped_x, ped_y = ped_data["x"], ped_data["y"]
+            
+            # Ignore pedestrians behind the car
+            if ped_x < 0:
+                continue
 
-def read_pedestrian_position(file_path, track_id):
-    """
-    Reads pedestrian position from a label file based on track_id.
-    
-    Args:
-        file_path (str): Path to the label3d file.
-        track_id (str): Unique ID of the pedestrian.
-        
-    Returns:
-        tuple: Pedestrian position (x, y), or None if track_id not found.
-    """
-    with open(file_path, 'r') as file:
-        for line in file:
-            data = line.strip().split(',')
-            if data[1] == track_id:  # Match track_id
-                pos_x, pos_y = float(data[3]), float(data[4])
-                return pos_x, pos_y
-    return None
+            # Calculate distance from the ego car
+            distance = math.sqrt(ped_x**2 + ped_y**2)
+            
+            # Determine movement
+            if ped_id in previous_positions:
+                prev_x, prev_y = previous_positions[ped_id]
 
-def calculate_2d_distance(pos1, pos2):
-    """
-    Calculate the 2D Euclidean distance between two points.
-    
-    Args:
-        pos1 (tuple): First position (x, y).
-        pos2 (tuple): Second position (x, y).
-        
-    Returns:
-        float: 2D distance.
-    """
-    return math.sqrt((pos2[0] - pos1[0])**2 + (pos2[1] - pos1[1])**2)
+                ped_modify_factor = math.sqrt((ego_position['x'] - perv_ego_postion['x'])**2 + (ego_position['y'] - perv_ego_postion['y'])**2)
+                movement = math.sqrt((ped_x - prev_x)**2 + (ped_y - prev_y)**2)-ped_modify_factor
 
-def main(file_id, track_id, odometry_dir, label_dir):
-    """
-    Main function to compute the 2D distance between ego-car and a pedestrian.
-    
-    Args:
-        file_id (str): File ID to match odometry and label files.
-        track_id (str): Unique ID of the pedestrian.
-        odometry_dir (str): Directory containing odometry files.
-        label_dir (str): Directory containing label files.
-        
-    Returns:
-        float: 2D distance between ego-car and the pedestrian.
-    """
-    odom_file = os.path.join(odometry_dir, f"odom_{file_id}.txt")
-    label_file = os.path.join(label_dir, f"label3d_{file_id}.txt")
-    
-    # Read positions
-    ego_car_pos = read_odometry(odom_file)
-    pedestrian_pos = read_pedestrian_position(label_file, track_id)
-    
-    if pedestrian_pos is None:
-        raise ValueError(f"Pedestrian with track_id '{track_id}' not found in {label_file}")
-    
-    # Calculate and return distance
-    return calculate_2d_distance(ego_car_pos, pedestrian_pos)
+                # print(f"frame id: {frame_id} and ped_id is : {ped_id} movement: ",movement)
+                movement_status = "Stopped" if movement < 0.25 else "Moving"
 
-# Example usage
-if __name__ == "__main__":
-    # File ID and track_id for testing
-    file_id = "0002"
-    track_id = "13f222fd-065c-4745-b441-44dd25566cbb"
-    
-    # Directories
-    odometry_dir = "/path/to/odometry/files"
-    label_dir = "/path/to/label/files"
-    
-    # Compute distance
-    try:
-        distance = main(file_id, track_id, odometry_dir, label_dir)
-        print(f"Distance between ego-car and pedestrian (track_id={track_id}): {distance:.2f} meters")
-    except ValueError as e:
-        print(e)
+                if ped_id in pending_corrections:
+                    results = [record for record in results if not (record["frame_id"] == pending_corrections[ped_id] and record["pedestrian_id"] == ped_id)]
+                    del pending_corrections[ped_id]
+            else:
+                movement = None
+                movement_status = "Unknown"
+                # to_remove_unknown.add(ped_id)
+                pending_corrections[ped_id] = frame_id
+
+            # Save the current position for the next frame
+            previous_positions[ped_id] = (ped_x, ped_y)
+            
+            # Append current results
+            current_results.append({
+                "scenario": scenario_name,
+                "frame_id": frame_id,
+                "pedestrian_id": ped_id,
+                "distance": distance,
+                "movement_status": movement_status,
+            })
+
+        perv_ego_postion = copy.copy(ego_position)
+        # print("perv_ego_postion: ",perv_ego_postion)
+
+        # Add current results to the overall list
+        results.extend(current_results)
+
+        # Remove pedestrians that are no longer in the current frame
+        previous_positions = {pid: pos for pid, pos in previous_positions.items() if pid in pedestrians}
+    return results
+
+def process_all_scenarios(root_directory):
+    results = []
+    for scenario in os.listdir(root_directory):
+        scenario_path = os.path.join(root_directory, scenario)
+        if not os.path.isdir(scenario_path):
+            continue
+
+        # Process the scenario directory
+        results.extend(process_scenario(scenario_path, scenario))
+
+    # Write results to a single CSV
+    df = pd.DataFrame(results)
+    df.to_csv("pedestrian_analysis.csv", index=False)
+
+# Run the processing function
+root_directory = "../Loki_Dataset_sample"
+process_all_scenarios(root_directory)
+
+print("Analysis complete. Results saved to 'pedestrian_analysis.csv'.")
