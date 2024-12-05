@@ -337,7 +337,6 @@ class PointCloudOdometryAligner:
             self.logger.debug(f"Selected {len(cropped_objects)} objects for cropping in frame {frame_index}")
 
             environment_pc = self.crop_environment(pc, objects)
-            self.visualize_point_clouds(environment_pc, environment_pc)
             cropped_pc = self.crop_objects_from_pcd(pc, cropped_objects)
 
             try:
