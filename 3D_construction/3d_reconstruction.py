@@ -7,10 +7,13 @@ from modules.pedestrian_map_aligner import PedestrianMapAligner
 from modules.helpers.align_direction import AlignDirection
 from modules.utils.visualization import PointCloudVisualizer
 
+file_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+loki_path = os.path.normpath(os.path.abspath(os.path.join(file_path, "..", "LOKI")))
+
 def odometry_aligner_test():
     oaligner = PointCloudOdometryAligner(
-        scenario_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\scenario_000',
-        loki_csv_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\loki.csv',
+        scenario_path=os.path.join(loki_path, 'scenario_000'),
+        loki_csv_path=os.path.join(loki_path, 'loki.csv'),
         key_frame=30
     )
 
@@ -24,8 +27,8 @@ def odometry_aligner_test():
     
 def pedestrian_map_aligner_test():
     maligner = PedestrianMapAligner(
-        scenario_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\scenario_026',
-        loki_csv_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\loki.csv',
+        scenario_path=os.path.join(loki_path, 'scenario_026'),
+        loki_csv_path=os.path.join(loki_path, 'loki.csv'),
         num_frames=30,
         pedestrian_id='4ff8af4d-6840-47c2-bc9b-eb383009ad65'
     )
@@ -33,7 +36,7 @@ def pedestrian_map_aligner_test():
     maligner.align()
 
 def main():
-    # odometry_aligner_test()
+    odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 
