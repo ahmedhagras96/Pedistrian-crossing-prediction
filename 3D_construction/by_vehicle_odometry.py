@@ -38,8 +38,8 @@ def parse_arguments() -> Arguments:
                         help='Directory to save processed point cloud files (default: ./output_directory/)')
     parser.add_argument('--loki_path', type=str, default=os.path.join(os.path.dirname(__file__), '../LOKI/'),
                         help='Base path for the LOKI data (default: ../LOKI/)')
-    parser.add_argument('--max_frames', type=int, default=40, help='Maximum number of frames to process')
-    parser.add_argument('--alignment_interval', type=int, default=10, help='Frames to keep for alignment')
+    parser.add_argument('--max_frames', type=int, default=30, help='Maximum number of frames to process')
+    parser.add_argument('--alignment_interval', type=int, default=4, help='Frames to keep for alignment') # TODO: Fix even only inputs
     parser.add_argument('--save_files', default=True, action='store_true', help='Enable saving point clouds')
     args = parser.parse_args()
 
@@ -226,7 +226,7 @@ class PointCloudOdometryAligner:
             self.logger.debug("Open3D visualization window created")
 
             if environment_pc:
-                # environment_pc.paint_uniform_color([0.5, 0.5, 0.5])  # Gray
+                environment_pc.paint_uniform_color([0.5, 0.5, 0.5])  # Gray
                 vis.add_geometry(environment_pc)
                 self.logger.debug("Added environment point cloud to visualization")
 
@@ -289,7 +289,7 @@ class PointCloudOdometryAligner:
         # Pass 2: Process the frames for alignment
         self.logger.info("Starting Pass 2: Processing frames for alignment")
         start_frame = self.max_frames - self.alignment_interval
-        end_frame = start_frame + self.alignment_interval
+        end_frame = start_frame + (self.alignment_interval * 2)
         logging.info(f"start_frame: {start_frame}, end_frame: {end_frame}")
         frame_indices_pass2 = list(range(start_frame, end_frame, self.frame_step))
         # frames_to_process_pass2 = self.max_frames
