@@ -2,9 +2,12 @@
 from enum import Enum
 from typing import Tuple
 import numpy as np
+import open3d as o3d
+import pandas as pd
 
 from .base_aligner import BaseAligner
 from .utils.logger import Logger
+from .utils.pointcloud_utils import PointCloudUtils
 
 class AlignDirection(Enum):
     LEFT = 1
@@ -33,23 +36,91 @@ class PointCloudOdometryAligner(BaseAligner):
         self._validate_alignment_input(key_frame, align_interval, align_direction)
         PointCloudOdometryAligner.logger.info(f"All input data valid")
         PointCloudOdometryAligner.logger.info(f"Key frame set to frame {key_frame}")
-        PointCloudOdometryAligner.logger.info(f"Alingment Inerval set to {align_interval}")
+        PointCloudOdometryAligner.logger.info(f"Alingment Interval set to {align_interval}")
         PointCloudOdometryAligner.logger.info(f"Alingment Direction set to {align_direction.name}")
 
-        self._align_environment(key_frame, align_interval, align_direction)
+        PointCloudOdometryAligner.logger.info(f"Aligning {align_interval} frames in {align_direction.name} direction")
+        start_frame, end_frame = self._get_start_end_frames(key_frame, align_interval, align_direction)
+
+        aligned_pcd = o3d.geometry.PointCloud()
+        aligned_env = self._align_environment(start_frame, end_frame)
+        aligned_objects = self._align_last_objects_instance(end_frame)
+        
+        if aligned_env and aligned_objects:
+            aligned_pcd = aligned_env + aligned_objects
+        
+        return aligned_env, aligned_objects
     
     def _validate_alignment_input(self, key_frame:int,  align_interval: int, align_direction: AlignDirection):
         self._validate_key_frame()
         self._validate_align_interval(align_interval)
         self._validate_align_direction(key_frame, align_interval, align_direction)
 
-    def _align_environment(self, key_frame: int, align_interval: int, align_direction: AlignDirection):
+    def _align_environment(self, start_frame: int, end_frame: int) -> o3d.geometry.PointCloud:
         PointCloudOdometryAligner.logger.info(f"Starting Odometry Environment Alignment Process")
-        PointCloudOdometryAligner.logger.info(f"Aligning {align_interval} frames in {align_direction.name} direction")
 
-        start_frame, end_frame = self._get_start_end_frames(key_frame, align_interval, align_direction)
         env_frame_indicies = list(np.arange(start_frame, end_frame + 1, self.frame_step))
         PointCloudOdometryAligner.logger.info(f"Aligning frames from {start_frame} to frames {end_frame}: {env_frame_indicies}")
+        
+        environment_pcd_queue = []
+        for frame_index in env_frame_indicies:
+            PointCloudOdometryAligner.logger.info(f"Processing frame {frame_index}")
+            pcd = self.loki.load_ply(frame_index)
+            odom = self.loki.load_odometry(frame_index)
+            label3d = self.loki.load_label3d(frame_index)
+            
+            pcd = pcd.voxel_down_sample(voxel_size=0.05) # TODO pass this value
+            pcd = self.remove_objects_from_pcd(pcd, label3d)
+            
+            transformation_matrix = self.get_transformation_matrix(odom)
+            pcd.transform(transformation_matrix)
+            environment_pcd_queue.append(pcd)
+
+        PointCloudOdometryAligner.logger.info(f"Aligning {len(environment_pcd_queue)} point clouds")
+        aligned_environment = o3d.geometry.PointCloud()
+        for pcd in environment_pcd_queue:
+            try:
+                aligned_environment += pcd
+            except Exception as e:
+                raise e
+            
+        PointCloudOdometryAligner.logger.info(f"Aligned enviornment point clouds using odometry successfully")
+        
+        return aligned_environment
+    
+    def _align_last_objects_instance(self, end_frame: int) -> o3d.geometry.PointCloud:
+        PointCloudOdometryAligner.logger.info(f"Starting Last Objects Instances Alignment Process")
+        PointCloudOdometryAligner.logger.info(f"Cropping objects from last frame: {end_frame}")
+        
+        pcd = self.loki.load_ply(end_frame)
+        odom = self.loki.load_odometry(end_frame)
+        label3d = self.loki.load_label3d(end_frame)
+        objects_needed = ['Car', 'Pedestrian'] # TODO: pass this value
+        label3d = label3d[label3d['labels'].isin(objects_needed)]
+        # aligned_objects = self.crop_objects_from_pcd(pcd, label3d, False)
+        positions = label3d[['pos_x', 'pos_y', 'pos_z']].values
+        dimensions = label3d[['dim_x', 'dim_y', 'dim_z']].values
+        yaws = label3d[['yaw']].values.flatten()
+
+        objects = []
+        for i in range(positions.shape[0]):
+            pos = positions[i]
+            dims = dimensions[i]
+            yaw = yaws[i]
+            
+            cropped = PointCloudUtils.crop_pcd(pcd, pos, dims, yaw)
+            objects.append(cropped)
+
+        aligned_objects = o3d.geometry.PointCloud()
+        for obj in objects:
+            if object:
+                transformation_matrix = self.get_transformation_matrix(odom)
+                obj.transform(transformation_matrix)
+                aligned_objects += obj
+
+        PointCloudOdometryAligner.logger.info(f"Cropped objects from last point clouds successfully")
+        
+        return aligned_objects
         
         
     def _get_start_end_frames(self, key_frame: int, align_interval: int, align_direction: AlignDirection) -> Tuple[int, int]:
@@ -81,6 +152,21 @@ class PointCloudOdometryAligner(BaseAligner):
         
         return start_frame, end_frame
 
+    @staticmethod
+    def remove_objects_from_pcd(pcd: o3d.geometry.PointCloud, label3d_df: pd.DataFrame) -> o3d.geometry.PointCloud:
+        positions = label3d_df[['pos_x', 'pos_y', 'pos_z']].values
+        dimensions = label3d_df[['dim_x', 'dim_y', 'dim_z']].values
+        yaws = label3d_df[['yaw']].values.flatten()
+        
+        for i in range(positions.shape[0]):
+            pos = positions[i]
+            dims = dimensions[i]
+            yaw = yaws[i]
+
+            pcd = PointCloudUtils.crop_pcd(pcd, pos, dims, yaw, True)
+
+        return pcd
+    
     def _validate_key_frame(self):
         # Ensure the key frame is even
         if self.key_frame % 2 != 0:
