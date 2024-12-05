@@ -36,7 +36,7 @@ def parse_arguments() -> Arguments:
     parser.add_argument('--scenario', type=str, default='scenario_000', help='Scenario identifier')
     parser.add_argument('--output_directory', type=str, default=os.path.join(os.path.dirname(__file__), './output_directory/'),
                         help='Directory to save processed point cloud files (default: ./output_directory/)')
-    parser.add_argument('--loki_path', type=str, default=os.path.join(os.path.dirname(__file__), '../LOKI/'),
+    parser.add_argument('--loki_path', type=str, default=os.path.join(os.path.dirname(__file__), '../../LOKI/'),
                         help='Base path for the LOKI data (default: ../LOKI/)')
     parser.add_argument('--max_frames', type=int, default=30, help='Maximum number of frames to process')
     parser.add_argument('--alignment_interval', type=int, default=4, help='Frames to keep for alignment') # TODO: Fix even only inputs
@@ -337,6 +337,7 @@ class PointCloudOdometryAligner:
             self.logger.debug(f"Selected {len(cropped_objects)} objects for cropping in frame {frame_index}")
 
             environment_pc = self.crop_environment(pc, objects)
+            self.visualize_point_clouds(environment_pc, environment_pc)
             cropped_pc = self.crop_objects_from_pcd(pc, cropped_objects)
 
             try:

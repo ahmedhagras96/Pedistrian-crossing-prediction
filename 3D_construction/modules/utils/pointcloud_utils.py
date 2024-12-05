@@ -1,7 +1,7 @@
 ﻿# utils/point_cloud_manager.py
 import open3d as o3d
 import os
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 from .logger import Logger
 
@@ -37,7 +37,7 @@ class PointCloudUtils:
             if not pcd.has_points():
                 PointCloudUtils.logger.error(f"Point cloud {file_path} contains no points.")
                 raise ValueError(f"Point cloud {file_path} contains no points.")
-            PointCloudUtils.logger.info(f"Loaded point cloud from {file_path}")
+            # PointCloudUtils.logger.info(f"Loaded point cloud from {file_path}")
             return pcd
         except Exception as e:
             PointCloudUtils.logger.error(f"Failed to load point cloud from {file_path}: {e}")
@@ -95,3 +95,13 @@ class PointCloudUtils:
         except Exception as e:
             PointCloudUtils.logger.error(f"Visualization failed: {e}")
             raise RuntimeError(f"Visualization failed: {e}")
+        
+    @staticmethod
+    def crop_pcd(pcd: o3d.geometry.PointCloud, pos: Tuple[float, float, float], dim: Tuple[float, float, float], yaw: float, invert: bool = False) -> o3d.geometry.PointCloud:
+        # Create oriented bounding box
+        rotation_matrix = o3d.geometry.get_rotation_matrix_from_xyz([0, 0, yaw])
+        box = o3d.geometry.OrientedBoundingBox(center=pos, R=rotation_matrix, extent=dim)
+
+        cropped = pcd.crop(box, invert=invert)
+        
+        return cropped

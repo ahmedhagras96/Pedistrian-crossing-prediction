@@ -2,7 +2,8 @@
 import os
 import glob
 from typing import List
-from logger import Logger
+
+from .logger import Logger
 
 class FileUtils:
     """
@@ -24,7 +25,7 @@ class FileUtils:
             bool: True if file exists, False otherwise.
         """
         exists = os.path.isfile(file_path)
-        FileUtils.logger.debug(f"Checking if file exists: {file_path} -> {exists}")
+        # FileUtils.logger.debug(f"Checking if file exists: {file_path} -> {exists}")
         return exists
 
     @staticmethod
@@ -39,7 +40,7 @@ class FileUtils:
             bool: True if directory exists, False otherwise.
         """
         exists = os.path.isdir(dir_path)
-        FileUtils.logger.debug(f"Checking if directory exists: {dir_path} -> {exists}")
+        # FileUtils.logger.debug(f"Checking if directory exists: {dir_path} -> {exists}")
         return exists
 
     @staticmethod
@@ -61,7 +62,8 @@ class FileUtils:
                 FileUtils.logger.error(f"Failed to create directory {dir_path}: {e}")
                 raise OSError(f"Failed to create directory {dir_path}: {e}")
         else:
-            FileUtils.logger.debug(f"Directory already exists: {dir_path}")
+            pass
+            # FileUtils.logger.debug(f"Directory already exists: {dir_path}")
 
     @staticmethod
     def list_files(dir_path: str, pattern: str = "*") -> List[str]:
@@ -77,5 +79,5 @@ class FileUtils:
         """
         search_pattern = os.path.join(dir_path, pattern)
         files = glob.glob(search_pattern)
-        FileUtils.logger.debug(f"Listing files in {dir_path} with pattern '{pattern}': Found {len(files)} files")
+        # FileUtils.logger.debug(f"Listing files in {dir_path} with pattern '{pattern}': Found {len(files)} files")
         return files
