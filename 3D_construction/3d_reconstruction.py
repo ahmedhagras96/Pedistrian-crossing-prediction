@@ -1,23 +1,41 @@
-﻿import sys
+﻿# modules/pedestrian_map_aligner.py
+import sys
 import os
 
-from modules.odometry_aligner import PointCloudOdometryAligner, AlignDirection
+from modules.odometry_aligner import PointCloudOdometryAligner
+from modules.pedestrian_map_aligner import PedestrianMapAligner
+from modules.helpers.align_direction import AlignDirection
 from modules.utils.visualization import PointCloudVisualizer
 
-def main():
+def odometry_aligner_test():
     oaligner = PointCloudOdometryAligner(
         scenario_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\scenario_000',
         loki_csv_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\loki.csv',
         key_frame=30
-    ) 
-    
+    )
+
     odometry_environment, odometry_objects = oaligner.align(20, 10, AlignDirection.SPLIT)
-    
+
     vis = PointCloudVisualizer()
     vis.add_point_cloud(odometry_environment, [0.5, 0.5, 0.5])
     vis.add_point_cloud(odometry_objects, color=[1, 0, 0])
     vis.run()
     vis.close()
+    
+def pedestrian_map_aligner_test():
+    maligner = PedestrianMapAligner(
+        scenario_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\scenario_026',
+        loki_csv_path=r'S:\researchlab\auc-research\Pedistrian-crossing-prediction\LOKI\loki.csv',
+        num_frames=30,
+        pedestrian_id='4ff8af4d-6840-47c2-bc9b-eb383009ad65'
+    )
+    
+    maligner.align()
+
+def main():
+    # odometry_aligner_test()
+    pedestrian_map_aligner_test()
+
 
 if __name__ == '__main__':
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
