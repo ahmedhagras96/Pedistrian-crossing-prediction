@@ -158,3 +158,7 @@ class LokiDataset:
             odometry,
             label3d
         )
+    
+    def load_loki_csv(self):
+        loki_df = pd.read_csv(self.loki_csv_path)
+        return loki_df

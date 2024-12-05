@@ -118,3 +118,12 @@ class PointCloudUtils:
         transformation_matrix[:3, 3] = translation
     
         return transformation_matrix
+    
+    @staticmethod
+    def get_yaw_matrix(yaw):
+        cos_yaw, sin_yaw = np.cos(yaw), np.sin(yaw)
+        return np.array([
+            [cos_yaw, -sin_yaw, 0],
+            [sin_yaw, cos_yaw, 0],
+            [0, 0, 1]
+        ])
