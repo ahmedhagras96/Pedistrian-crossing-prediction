@@ -29,9 +29,11 @@ logging.basicConfig(level=logging.DEBUG, handlers=[handler])
 logger = logging.getLogger(__name__)
 class ScenarioManager:
     def __init__(self, scenario_name, loki_path=None, NumFrames=0, ped_id=None):
-        self.folder = os.path.relpath(os.path.join(os.curdir, scenario_name))
+        self.folder_path = os.path.normpath(os.path.join(os.path.dirname((__file__)), '../LOKI/'))
+        self.scenario_path = os.path.join(self.folder_path, scenario_name)
+        self.loki_path = os.path.join(self.folder_path, loki_path)
+        self.map_path = os.path.join(self.scenario_path, 'map.ply')
         self.scenario_name = scenario_name
-        self.loki_path = loki_path
         self.num_frames = NumFrames
         self.ped_id = ped_id
         self.frame_numbers = self.get_relevant_frames()
@@ -70,15 +72,15 @@ class ScenarioManager:
         label_3d = []
         # populate label_3d based on frame numbers
         for i ,frame_number in enumerate(self.frame_numbers):
-            label_path = os.path.join(self.folder, f"label3d_{frame_number}.txt")
+            label_path = os.path.join(self.scenario_path, f"label3d_{frame_number}.txt")
             label_3d.append(label_path)
         logger.info(f"Loaded label3d for {len(label_3d)} frames.")
         return label_3d
 
     def get_odometry(self):
         odometry_data = {}
-        odometry = {os.path.splitext(file.split('_')[-1])[0]: os.path.join(self.folder, file)
-                    for file in os.listdir(self.folder) if file.startswith('odom')}
+        odometry = {os.path.splitext(file.split('_')[-1])[0]: os.path.join(self.scenario_path, file)
+                    for file in os.listdir(self.scenario_path) if file.startswith('odom')}
         # Load odometry only for relevant frames
         for frame_number in self.frame_numbers:
             odometry_path = odometry.get(frame_number)
@@ -98,7 +100,7 @@ class ScenarioManager:
     def process_labels(self):
         for label_file in self.label_3d:
             frame_number = os.path.splitext(os.path.basename(label_file))[0].split('_')[-1]
-            frame_path = f'./{self.scenario_name}/pc_{frame_number}.ply'
+            frame_path = os.path.join(self.folder_path, self.scenario_name, f'pc_{frame_number}.ply')
             frame_point_cloud = o3d.io.read_point_cloud(frame_path)
 
             if len(frame_point_cloud.points) == 0:
@@ -252,8 +254,7 @@ class ScenarioManager:
 
         car_points = [np.concatenate(points, axis=0) for points in self.car_id_to_points.get(frame_number, {}).values()]
 
-        map_path = os.path.join((os.path.relpath(self.scenario_name)), "map.ply")
-        map_points = np.asarray(o3d.io.read_point_cloud(map_path).points)
+        map_points = np.asarray(o3d.io.read_point_cloud(self.map_path).points)
 
         scenario_points = np.concatenate([pedestrian_points, car_points[0], map_points], axis=0)
         scenario_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(scenario_points))
@@ -300,8 +301,7 @@ class ScenarioManager:
                 vis.add_geometry(car_pcd)
 
             # Adding the map
-            map_path = os.path.join((os.path.relpath(self.scenario_name)), "map.ply")
-            map_pcd = o3d.io.read_point_cloud(map_path)
+            map_pcd = o3d.io.read_point_cloud(self.map_path)
             vis.add_geometry(map_pcd)
        
         print(f"{self.frame_numbers}\nframes loaded within the range {self.num_frames} for pedestrian {self.ped_id}")
@@ -314,10 +314,10 @@ class ScenarioManager:
         
 
 if __name__ == "__main__":
-    processor = ScenarioManager(scenario_name="scenario_026", loki_path="./loki.csv", NumFrames=24, ped_id='4ff8af4d-6840-47c2-bc9b-eb383009ad65')
+    processor = ScenarioManager(scenario_name="scenario_026", loki_path="loki.csv", NumFrames=20, ped_id='4ff8af4d-6840-47c2-bc9b-eb383009ad65')
     processor.process_labels()
     processor.align_pedestrian_data() 
-    processor.visualize(cropped=True)
+    processor.visualize(cropped=False)
 
 
 
