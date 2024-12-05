@@ -1,4 +1,5 @@
 ﻿# utils/point_cloud_manager.py
+import numpy as np
 import open3d as o3d
 import os
 from typing import Optional, List, Tuple
@@ -97,11 +98,23 @@ class PointCloudUtils:
             raise RuntimeError(f"Visualization failed: {e}")
         
     @staticmethod
-    def crop_pcd(pcd: o3d.geometry.PointCloud, pos: Tuple[float, float, float], dim: Tuple[float, float, float], yaw: float, invert: bool = False) -> o3d.geometry.PointCloud:
+    def crop_pcd(pcd: o3d.geometry.PointCloud, pos: Tuple[float, float, float], dim: Tuple[float, float, float], yaw: float, remove: bool = False) -> o3d.geometry.PointCloud:
         # Create oriented bounding box
         rotation_matrix = o3d.geometry.get_rotation_matrix_from_xyz([0, 0, yaw])
         box = o3d.geometry.OrientedBoundingBox(center=pos, R=rotation_matrix, extent=dim)
 
-        cropped = pcd.crop(box, invert=invert)
+        cropped = pcd.crop(box, invert=remove)
         
         return cropped
+    
+    @staticmethod
+    def get_transformation_matrix(odometry: Tuple[float, float, float, float, float, float]) -> np.ndarray:
+        x, y, z, roll, pitch, yaw = odometry
+        translation = np.array([x, y, z])
+        rotation = o3d.geometry.get_rotation_matrix_from_xyz((roll, pitch, yaw))
+    
+        transformation_matrix = np.eye(4)
+        transformation_matrix[:3, :3] = rotation
+        transformation_matrix[:3, 3] = translation
+    
+        return transformation_matrix

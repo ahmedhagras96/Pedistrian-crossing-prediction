@@ -32,23 +32,8 @@ class BaseAligner(ABC):
         """
         pass
 
-    @abstractmethod
-    def _validate_alignment_input(self, *args):
-        """
-        Abstract method to validate the alignment input for this aligner.
-        """
-        pass
-    
     def get_transformation_matrix(self, odometry: Tuple[float, float, float, float, float, float]) -> np.ndarray:
-        x, y, z, roll, pitch, yaw = odometry
-        translation = np.array([x, y, z])
-        rotation = o3d.geometry.get_rotation_matrix_from_xyz((roll, pitch, yaw))
-    
-        transformation_matrix = np.eye(4)
-        transformation_matrix[:3, :3] = rotation
-        transformation_matrix[:3, 3] = translation
-        
-        return transformation_matrix
+        return PointCloudUtils.get_transformation_matrix(odometry)
         
     def load_point_cloud(self, file_path: str) -> o3d.geometry.PointCloud:
         return PointCloudUtils.load_point_cloud(file_path)
