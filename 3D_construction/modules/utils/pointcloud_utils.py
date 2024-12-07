@@ -1,5 +1,4 @@
-﻿# utils/point_cloud_manager.py
-import numpy as np
+﻿import numpy as np
 import open3d as o3d
 import os
 from typing import Optional, List, Tuple

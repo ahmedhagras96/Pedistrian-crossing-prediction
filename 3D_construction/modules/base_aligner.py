@@ -1,10 +1,8 @@
-﻿# modules/base_processor.py
-from abc import ABC, abstractmethod
+﻿from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
 import open3d as o3d
 
-from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
 from .loki import LokiDataset
 
@@ -13,9 +11,6 @@ class BaseAligner(ABC):
     """
     Abstract base class for different types of processors.
     """
-
-    # Initialize a class-level logger
-    # logger = Logger.get_logger(__name__)
 
     def __init__(self, scenario_path: str, loki_csv_path: str, key_frame: int, max_frames: int = 100, frame_step: int = 2) -> None:
         self.scenario_path = scenario_path
