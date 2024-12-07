@@ -25,18 +25,32 @@ def odometry_aligner_test():
     vis.run()
     vis.close()
     
+    
 def pedestrian_map_aligner_test():
     maligner = PedestrianMapAligner(
-        scenario_path=os.path.join(loki_path, 'scenario_026'),
+        scenario_path=os.path.join(loki_path, 'scenario_000'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
-        num_frames=30,
-        pedestrian_id='4ff8af4d-6840-47c2-bc9b-eb383009ad65'
+        num_frames=1,
+        pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d'
     )
     
-    maligner.align()
+    map_environment, pedestrian, cars, scaled_box = maligner.align()
+    # Visualize the aligned points
+
+    visualizer = PointCloudVisualizer()
+    visualizer.add_point_cloud(pedestrian, [0.5, 0.5, 1])
+    visualizer.add_point_cloud(scaled_box)
+    visualizer.add_point_cloud(cars, [1, 0.5, 0.5])
+    visualizer.add_point_cloud(map_environment)
+    visualizer.run()
+    visualizer.close()
+
+    # save 
+    # maligner.save(os.path.join(loki_path, 'scenario_026'), remove=False)
+
 
 def main():
-    odometry_aligner_test()
+    # odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 
