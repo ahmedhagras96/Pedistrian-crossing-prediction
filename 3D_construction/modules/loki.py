@@ -1,6 +1,4 @@
-﻿# utils/loki_dataset.py
-
-import os
+﻿import os
 import pandas as pd
 import open3d as o3d
 import re
@@ -131,7 +129,7 @@ class LokiDataset:
             LokiDataset.logger.error(f"Failed to load label3d for frame {frame_index}: {e}")
             return None
 
-    def load_aligment_data(self, frame_index: int) -> Optional[Tuple[Any, Any, Any]]:
+    def load_alignment_data(self, frame_index: int) -> Optional[Tuple[Any, Any, Any]]:
         """
         Loads the point cloud, odometry, and label 3d data for the specified frame index.
 

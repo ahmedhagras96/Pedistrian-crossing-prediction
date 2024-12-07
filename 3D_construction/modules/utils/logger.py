@@ -1,5 +1,4 @@
-﻿# modules/logger.py
-import logging
+﻿import logging
 
 
 class ColorFormatter(logging.Formatter):

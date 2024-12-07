@@ -6,7 +6,6 @@ import numpy as np
 from .base_aligner import BaseAligner
 from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
-from .utils.visualization import PointCloudVisualizer
 
 class PedestrianMapAligner(BaseAligner):
     """
@@ -76,8 +75,7 @@ class PedestrianMapAligner(BaseAligner):
         objects_needed = ['Car', 'Pedestrian']  # TODO: pass this value
 
         for frame in self.frames:
-            pcd, odom, label3d = self.loki.load_aligment_data(frame)
-            objects_needed = ['Car', 'Pedestrian']  # TODO: pass this value
+            pcd, odom, label3d = self.loki.load_alignment_data(frame)
             objects = label3d[label3d['labels'].isin(objects_needed)]
             target_pedestrian_exists = objects[objects['track_id'].isin([self.pedestrian_id])].shape[0] > 0
             if target_pedestrian_exists:
@@ -147,8 +145,6 @@ class PedestrianMapAligner(BaseAligner):
                 self.logger.error(f"Failed to process frame {frame}: {e}")
             
         self.logger.info(f"Saved cropped pedestrian point clouds to: {path_ped}")
-
-
 
     def _get_relevant_frames(self):
         """
@@ -222,5 +218,3 @@ class PedestrianMapAligner(BaseAligner):
         concat_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(concat_points))
         cropped_pcd = concat_pcd.crop(bounding_box_o3d, invert=remove)
         return cropped_pcd
-
-

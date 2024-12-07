@@ -1,5 +1,4 @@
-﻿# modules/odometry_processor.py
-from typing import Tuple
+﻿from typing import Tuple
 import numpy as np
 import open3d as o3d
 import pandas as pd
@@ -148,7 +147,7 @@ class PointCloudOdometryAligner(BaseAligner):
         self.logger.info("Starting Last Objects Instances Alignment Process")
         self.logger.info(f"Cropping objects from last frame: {end_frame}")
 
-        pcd, odom, label3d = self.loki.load_aligment_data(end_frame)
+        pcd, odom, label3d = self.loki.load_alignment_data(end_frame)
         objects_needed = ['Car', 'Pedestrian']  # TODO: pass this value
         label3d = label3d[label3d['labels'].isin(objects_needed)]
 
