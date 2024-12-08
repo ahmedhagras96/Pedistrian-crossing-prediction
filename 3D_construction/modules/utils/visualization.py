@@ -3,6 +3,7 @@ import numpy as np
 from typing import List
 
 from .logger import Logger
+from .recon_3d_config import Reconstuction3DConfig
 
 class PointCloudVisualizer:
     """
@@ -13,7 +14,7 @@ class PointCloudVisualizer:
     logger = Logger.get_logger(__name__)
 
     def __init__(self, window_name: str = "Open3D Point Cloud Visualizer",
-                 point_size: float = 1.0,
+                 point_size: float = None,
                  background_color=None):
         """
         Initializes the PointCloudVisualizer with specified visualization parameters.
@@ -23,11 +24,16 @@ class PointCloudVisualizer:
             point_size (float, optional): Size of the points in the visualization. Defaults to 3.0.
             background_color (List[float], optional): Background color of the visualization window. Defaults to [0.2, 0.2, 0.2].
         """
-        if background_color is None:
-            background_color = [0.2, 0.2, 0.2]
         self.window_name = window_name
-        self.point_size = point_size
+        
+        if background_color is None:
+            background_color = Reconstuction3DConfig.background_color
+            
+        if point_size is None:
+            point_size = Reconstuction3DConfig.point_size
+        
         self.background_color = background_color
+        self.point_size = point_size
         self.vis = None  # Open3D Visualizer instance
         # PointCloudVisualizer.logger.info(f"Initialized PointCloudVisualizer with window_name='{self.window_name}', "
         #                  f"point_size={self.point_size}, background_color={self.background_color}")

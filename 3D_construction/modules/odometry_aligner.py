@@ -6,6 +6,7 @@ import pandas as pd
 from .base_aligner import BaseAligner
 from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
+from .utils.recon_3d_config import Reconstuction3DConfig
 from .helpers.align_direction import AlignDirection
 from .helpers.odometry_validation import OdometryValidation
 
@@ -17,7 +18,7 @@ class PointCloudOdometryAligner(BaseAligner):
     using odometry data to ensure accurate spatial relationships.
     """
 
-    def __init__(self, scenario_path: str, loki_csv_path: str, key_frame: int, max_frames: int = 100, frame_step: int = 2):
+    def __init__(self, scenario_path: str, loki_csv_path: str, key_frame: int):
         """
         Initializes the PointCloudOdometryAligner with scenario and odometry data.
         
@@ -25,13 +26,11 @@ class PointCloudOdometryAligner(BaseAligner):
             scenario_path (str): Path to the scenario directory containing point cloud and odometry files.
             loki_csv_path (str): Path to the LOKI CSV file containing additional data.
             key_frame (int): The reference frame index for alignment.
-            max_frames (int, optional): Maximum number of frames available for processing. Defaults to 100.
-            frame_step (int, optional): Step size between frames to be aligned. Defaults to 2.
         
         Raises:
             ValueError: If key_frame is negative.
         """
-        super().__init__(scenario_path, loki_csv_path, key_frame, max_frames, frame_step)
+        super().__init__(scenario_path, loki_csv_path, key_frame)
 
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
@@ -110,7 +109,9 @@ class PointCloudOdometryAligner(BaseAligner):
             odom = self.loki.load_odometry(frame_index)
             label3d = self.loki.load_label3d(frame_index)
 
-            pcd = pcd.voxel_down_sample(voxel_size=0.05)  # TODO: pass this value
+            if Reconstuction3DConfig.use_downsampling:
+                pcd = pcd.voxel_down_sample(voxel_size=Reconstuction3DConfig.voxel_size)
+                
             pcd = self._remove_objects_from_environment(pcd, label3d)
 
             transformation_matrix = self.get_transformation_matrix(odom)
@@ -148,8 +149,7 @@ class PointCloudOdometryAligner(BaseAligner):
         self.logger.info(f"Cropping objects from last frame: {end_frame}")
 
         pcd, odom, label3d = self.loki.load_alignment_data(end_frame)
-        objects_needed = ['Car', 'Pedestrian']  # TODO: pass this value
-        label3d = label3d[label3d['labels'].isin(objects_needed)]
+        label3d = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
 
         positions = label3d[['pos_x', 'pos_y', 'pos_z']].values
         dimensions = label3d[['dim_x', 'dim_y', 'dim_z']].values

@@ -49,7 +49,7 @@ def pedestrian_map_aligner_test():
 
 
 def main():
-    # odometry_aligner_test()
+    odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 

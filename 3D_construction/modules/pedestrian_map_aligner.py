@@ -6,6 +6,7 @@ import numpy as np
 from .base_aligner import BaseAligner
 from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
+from .utils.recon_3d_config import Reconstuction3DConfig
 
 class PedestrianMapAligner(BaseAligner):
     """
@@ -72,11 +73,10 @@ class PedestrianMapAligner(BaseAligner):
          """
 
         self.frames = self._get_relevant_frames()
-        objects_needed = ['Car', 'Pedestrian']  # TODO: pass this value
 
         for frame in self.frames:
             pcd, odom, label3d = self.loki.load_alignment_data(frame)
-            objects = label3d[label3d['labels'].isin(objects_needed)]
+            objects = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
             target_pedestrian_exists = objects[objects['track_id'].isin([self.pedestrian_id])].shape[0] > 0
             if target_pedestrian_exists:
                 transformation_matrix = self.get_transformation_matrix(odom)
