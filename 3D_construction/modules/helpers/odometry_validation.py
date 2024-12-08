@@ -1,5 +1,6 @@
 ﻿from .align_direction import AlignDirection
 
+
 class OdometryValidation:
     """
     A utility class for validating odometry alignment parameters.
@@ -9,7 +10,8 @@ class OdometryValidation:
     """
 
     @staticmethod
-    def validate_alignment_input(key_frame: int, align_interval: int, align_direction: AlignDirection, max_frames: int, logger):
+    def validate_alignment_input(key_frame: int, align_interval: int, align_direction: AlignDirection, max_frames: int,
+                                 logger):
         """
         Validates the alignment input parameters.
         
@@ -80,7 +82,8 @@ class OdometryValidation:
             raise ValueError("Alignment interval must allow at least 1 frame.")
 
     @staticmethod
-    def validate_align_direction(key_frame: int, align_interval: int, align_direction: AlignDirection, max_frames: int, logger):
+    def validate_align_direction(key_frame: int, align_interval: int, align_direction: AlignDirection, max_frames: int,
+                                 logger):
         """
         Validates that there are enough frames in the specified alignment direction.
 

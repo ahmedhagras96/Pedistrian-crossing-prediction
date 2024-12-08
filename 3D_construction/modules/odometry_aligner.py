@@ -10,6 +10,7 @@ from .utils.recon_3d_config import Reconstuction3DConfig
 from .helpers.align_direction import AlignDirection
 from .helpers.odometry_validation import OdometryValidation
 
+
 class PointCloudOdometryAligner(BaseAligner):
     """
     Processor for aligning point clouds based on vehicle odometry.
@@ -35,7 +36,8 @@ class PointCloudOdometryAligner(BaseAligner):
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
-    def align(self, key_frame: int = None, align_interval: int = 10, align_direction: AlignDirection = AlignDirection.SPLIT):
+    def align(self, key_frame: int = None, align_interval: int = 10,
+              align_direction: AlignDirection = AlignDirection.SPLIT):
         """
         Aligns point clouds based on the specified key frame, alignment interval, and direction.
         
@@ -62,7 +64,8 @@ class PointCloudOdometryAligner(BaseAligner):
 
         key_frame = key_frame if key_frame is not None else self.key_frame
 
-        OdometryValidation.validate_alignment_input(key_frame, align_interval, align_direction, self.max_frames, self.logger)
+        OdometryValidation.validate_alignment_input(key_frame, align_interval, align_direction, self.max_frames,
+                                                    self.logger)
         self.logger.info("All input data valid")
         self.logger.info(f"Key frame set to frame {key_frame}")
         self.logger.info(f"Alignment Interval set to {align_interval}")
@@ -111,7 +114,7 @@ class PointCloudOdometryAligner(BaseAligner):
 
             if Reconstuction3DConfig.use_downsampling:
                 pcd = pcd.voxel_down_sample(voxel_size=Reconstuction3DConfig.voxel_size)
-                
+
             pcd = self._remove_objects_from_environment(pcd, label3d)
 
             transformation_matrix = self.get_transformation_matrix(odom)
@@ -172,7 +175,8 @@ class PointCloudOdometryAligner(BaseAligner):
 
         return aligned_objects
 
-    def _remove_objects_from_environment(self, pcd: o3d.geometry.PointCloud, label3d_df: pd.DataFrame) -> o3d.geometry.PointCloud:
+    def _remove_objects_from_environment(self, pcd: o3d.geometry.PointCloud,
+                                         label3d_df: pd.DataFrame) -> o3d.geometry.PointCloud:
         """
         Removes specified objects from the environment point cloud based on label3D data.
         
@@ -196,10 +200,11 @@ class PointCloudOdometryAligner(BaseAligner):
             count += 1
 
         self.logger.debug(f"Removed {count} objects from pcd")
-        
+
         return pcd
 
-    def _get_start_end_frames(self, key_frame: int, align_interval: int, align_direction: AlignDirection) -> Tuple[int, int]:
+    def _get_start_end_frames(self, key_frame: int, align_interval: int, align_direction: AlignDirection) -> Tuple[
+        int, int]:
         """
         Determines the start and end frame indices for alignment based on direction.
         

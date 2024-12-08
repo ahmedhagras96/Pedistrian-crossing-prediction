@@ -5,6 +5,7 @@ from typing import List
 from .logger import Logger
 from .recon_3d_config import Reconstuction3DConfig
 
+
 class PointCloudVisualizer:
     """
     A utility class for visualizing point clouds using Open3D with integrated custom logging.
@@ -25,13 +26,13 @@ class PointCloudVisualizer:
             background_color (List[float], optional): Background color of the visualization window. Defaults to [0.2, 0.2, 0.2].
         """
         self.window_name = window_name
-        
+
         if background_color is None:
             background_color = Reconstuction3DConfig.background_color
-            
+
         if point_size is None:
             point_size = Reconstuction3DConfig.point_size
-        
+
         self.background_color = background_color
         self.point_size = point_size
         self.vis = None  # Open3D Visualizer instance
@@ -62,7 +63,7 @@ class PointCloudVisualizer:
         self.add_point_cloud(pcd)
         self.run()
         self.close()
-    
+
     def add_point_cloud(self, pcd: o3d.geometry.PointCloud, color: List[float] = None):
         """
         Adds a point cloud to the visualizer with optional coloring.
@@ -82,9 +83,9 @@ class PointCloudVisualizer:
                 pcd.paint_uniform_color(color)
                 # PointCloudVisualizer.logger.info(f"Painted point cloud with color: {color}")
             # else:
-                # Assign a default color if none is provided
-                # pcd.paint_uniform_color([1, 1, 1])  # White
-                # PointCloudVisualizer.logger.info("No color provided. Painted point cloud white by default.")
+            # Assign a default color if none is provided
+            # pcd.paint_uniform_color([1, 1, 1])  # White
+            # PointCloudVisualizer.logger.info("No color provided. Painted point cloud white by default.")
 
             self.vis.add_geometry(pcd)
             # PointCloudVisualizer.logger.info(f"Added point cloud to visualizer: {name if name else 'Unnamed'}")

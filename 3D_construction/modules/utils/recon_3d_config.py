@@ -14,4 +14,3 @@ class Reconstuction3DConfig:
     use_downsampling: bool = True
     point_size: float = 3.0
     background_color: tuple[float] = (0.2, 0.2, 0.2)
-    

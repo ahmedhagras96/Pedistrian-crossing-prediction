@@ -8,6 +8,7 @@ from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
 from .utils.recon_3d_config import Reconstuction3DConfig
 
+
 class PedestrianMapAligner(BaseAligner):
     """
     Aligns and processes pedestrian and car data in a point cloud scenario.
@@ -32,7 +33,7 @@ class PedestrianMapAligner(BaseAligner):
             - Scenario name is derived from the LOKI scenario ID.
         """
         super().__init__(scenario_path, loki_csv_path, num_frames)
-        
+
         self.num_frames = num_frames
         self.map_pcd = None
         self.frames = None
@@ -41,7 +42,7 @@ class PedestrianMapAligner(BaseAligner):
         self.pedestrian_data = {}
         self.car_data = {}
         self.logger = Logger.get_logger(self.__class__.__name__)
-        self.logger.info(f"Initialized {self.__class__.__name__}")        
+        self.logger.info(f"Initialized {self.__class__.__name__}")
 
     def align(self, *args):
         """
@@ -99,13 +100,13 @@ class PedestrianMapAligner(BaseAligner):
                         self.car_data.setdefault(frame, []).append(obj_points)
 
         last_frame = self.frames[-1]
-        ped_points, bounding_box_scaled = self.pedestrian_data[last_frame] 
+        ped_points, bounding_box_scaled = self.pedestrian_data[last_frame]
         car_points = self.car_data[last_frame]
         ped_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(ped_points))
         cars_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(np.concatenate(car_points, axis=0)))
         self.map_pcd = o3d.io.read_point_cloud(os.path.join(self.scenario_path, 'map.ply'))
         return self.map_pcd, ped_ply, cars_ply, bounding_box_scaled
-    
+
     def save(self, save_path: str, remove: bool = False):
         """
         Saves the cropped pedestrian point clouds.
@@ -143,7 +144,7 @@ class PedestrianMapAligner(BaseAligner):
 
             except Exception as e:
                 self.logger.error(f"Failed to process frame {frame}: {e}")
-            
+
         self.logger.info(f"Saved cropped pedestrian point clouds to: {path_ped}")
 
     def _get_relevant_frames(self):
@@ -172,7 +173,8 @@ class PedestrianMapAligner(BaseAligner):
         filtered_pedestrian_data = filtered_scenario_data[filtered_scenario_data['Ped_ID'] == self.pedestrian_id]
 
         if filtered_pedestrian_data.empty:
-            self.logger.warning(f"No data found for Pedestrian ID: {self.pedestrian_id} in scenario: {self.scenario_name}.")
+            self.logger.warning(
+                f"No data found for Pedestrian ID: {self.pedestrian_id} in scenario: {self.scenario_name}.")
             return []
 
         frame_numbers = []
@@ -214,7 +216,8 @@ class PedestrianMapAligner(BaseAligner):
         self.logger.info(f"Cropping the map to the bounding box of the pedestrian in frame: {frame}.")
         ped_points, bounding_box_o3d = self.pedestrian_data[frame]
         car_points = self.car_data[frame]
-        concat_points = np.concatenate([ped_points, np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], axis=0)
+        concat_points = np.concatenate(
+            [ped_points, np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], axis=0)
         concat_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(concat_points))
         cropped_pcd = concat_pcd.crop(bounding_box_o3d, invert=remove)
         return cropped_pcd

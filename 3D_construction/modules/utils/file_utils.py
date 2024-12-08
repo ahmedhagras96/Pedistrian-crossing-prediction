@@ -4,6 +4,7 @@ from typing import List
 
 from .logger import Logger
 
+
 class FileUtils:
     """
     Utility class for handling file and directory operations.

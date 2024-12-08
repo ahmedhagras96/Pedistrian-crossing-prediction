@@ -9,6 +9,7 @@ from modules.utils.visualization import PointCloudVisualizer
 file_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 loki_path = os.path.normpath(os.path.abspath(os.path.join(file_path, "..", "LOKI")))
 
+
 def odometry_aligner_test():
     odom_aligner = PointCloudOdometryAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
@@ -23,8 +24,8 @@ def odometry_aligner_test():
     vis.add_point_cloud(odometry_objects, color=[1, 0, 0])
     vis.run()
     vis.close()
-    
-    
+
+
 def pedestrian_map_aligner_test():
     map_aligner = PedestrianMapAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
@@ -32,7 +33,7 @@ def pedestrian_map_aligner_test():
         num_frames=1,
         pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d'
     )
-    
+
     map_environment, pedestrian, cars, scaled_box = map_aligner.align()
     # Visualize the aligned points
 

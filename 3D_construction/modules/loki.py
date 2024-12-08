@@ -8,6 +8,7 @@ from .utils.logger import Logger
 from .utils.file_utils import FileUtils
 from .utils.pointcloud_utils import PointCloudUtils
 
+
 class LokiDataset:
     """
     Class to handle loading of LOKI dataset files including point clouds, odometry, and label3d data.
@@ -156,7 +157,7 @@ class LokiDataset:
             odometry,
             label3d
         )
-    
+
     def load_loki_csv(self):
         loki_df = pd.read_csv(self.loki_csv_path)
         return loki_df

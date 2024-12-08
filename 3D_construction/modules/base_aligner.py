@@ -30,9 +30,9 @@ class BaseAligner(ABC):
 
     def get_transformation_matrix(self, odometry: Tuple[float, float, float, float, float, float]) -> np.ndarray:
         return PointCloudUtils.get_transformation_matrix(odometry)
-        
+
     def load_point_cloud(self, file_path: str) -> o3d.geometry.PointCloud:
         return PointCloudUtils.load_point_cloud(file_path)
-    
+
     def save_point_cloud(self, file_path: str, pointcloud: o3d.geometry.PointCloud) -> None:
         PointCloudUtils.save_point_cloud(file_path, pointcloud)
