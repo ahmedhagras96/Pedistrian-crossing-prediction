@@ -7,8 +7,9 @@ from modules.helpers.align_direction import AlignDirection
 from modules.utils.visualization import PointCloudVisualizer
 from modules.utils.logger import Logger
 
-file_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-loki_path = os.path.normpath(os.path.abspath(os.path.join(file_path, "..", "LOKI")))
+script_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
+loki_path = os.path.normpath(os.path.abspath(os.path.join(script_path, "..", "LOKI")))
+log_file = os.path.normpath(os.path.abspath(os.path.join(script_path, "logs", "logs.log")))
 logger = None
 
 def odometry_aligner_test():
@@ -65,5 +66,6 @@ def main():
 
 if __name__ == '__main__':
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    Logger.configure_unified_file_logging(log_file)
     logger = Logger.get_logger(__name__)
     main()

@@ -1,4 +1,5 @@
 ﻿import logging
+import os
 
 
 class ColorFormatter(logging.Formatter):
@@ -18,34 +19,52 @@ class ColorFormatter(logging.Formatter):
 
 
 class Logger:
+    _file_handler_configured = False
+
     @staticmethod
-    def get_logger(name: str, log_file: str = None) -> logging.Logger:
+    def configure_unified_file_logging(log_file: str):
         """
-        Configure and return a logger with the specified name.
-        Optionally logs to a file as well.
-    
+        Configure a shared file handler for all loggers.
+        Ensures the log file and its directory exist and overwrites the log file if it already exists.
+        
+        Args:
+            log_file (str): Path to the unified log file.
+        """
+        if not Logger._file_handler_configured:
+            # Ensure the directory exists
+            log_dir = os.path.dirname(log_file)
+            if log_dir and not os.path.exists(log_dir):
+                os.makedirs(log_dir)
+
+            # Set up the file handler in overwrite mode ('w')
+            root_logger = logging.getLogger()
+            file_handler = logging.FileHandler(log_file, mode='w')
+            file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+            file_handler.setFormatter(file_formatter)
+            root_logger.addHandler(file_handler)
+            root_logger.setLevel(logging.DEBUG)
+            Logger._file_handler_configured = True
+
+    @staticmethod
+    def get_logger(name: str) -> logging.Logger:
+        """
+        Get a logger for a specific class or module, configured to use the shared file handler.
+        
         Args:
             name (str): Name of the logger.
-            log_file (str, optional): Path to the log file. Defaults to None.
-    
+        
         Returns:
             logging.Logger: Configured logger.
         """
         logger = logging.getLogger(name)
         if not logger.handlers:
-            # Console handler with color formatting
+            # Add a console handler with color formatting
             console_handler = logging.StreamHandler()
             color_formatter = ColorFormatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
             console_handler.setFormatter(color_formatter)
             logger.addHandler(console_handler)
 
-            if log_file:
-                # File handler without color formatting
-                file_handler = logging.FileHandler(log_file)
-                file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-                file_handler.setFormatter(file_formatter)
-                logger.addHandler(file_handler)
-
             logger.setLevel(logging.DEBUG)
-            logger.propagate = False
+            # Allows messages to propagate to the root logger
+            logger.propagate = True 
         return logger

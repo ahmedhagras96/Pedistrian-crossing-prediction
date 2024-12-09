@@ -102,7 +102,7 @@ class PointCloudOdometryAligner(BaseAligner):
         """
         self.logger.info("Starting Odometry Environment Alignment Process")
 
-        frame_indices = list(np.arange(start_frame, end_frame + 1, self.frame_step))
+        frame_indices = list(map(int, np.arange(start_frame, end_frame + 1, self.frame_step)))
         self.logger.info(f"Aligning frames from {start_frame} to {end_frame}: {frame_indices}")
 
         environment_pcd_queue = []
