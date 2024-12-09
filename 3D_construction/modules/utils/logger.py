@@ -19,22 +19,33 @@ class ColorFormatter(logging.Formatter):
 
 class Logger:
     @staticmethod
-    def get_logger(name: str) -> logging.Logger:
+    def get_logger(name: str, log_file: str = None) -> logging.Logger:
         """
         Configure and return a logger with the specified name.
+        Optionally logs to a file as well.
     
         Args:
             name (str): Name of the logger.
+            log_file (str, optional): Path to the log file. Defaults to None.
     
         Returns:
             logging.Logger: Configured logger.
         """
         logger = logging.getLogger(name)
         if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = ColorFormatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
-            handler.setFormatter(formatter)
+            # Console handler with color formatting
+            console_handler = logging.StreamHandler()
+            color_formatter = ColorFormatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+            console_handler.setFormatter(color_formatter)
+            logger.addHandler(console_handler)
+
+            if log_file:
+                # File handler without color formatting
+                file_handler = logging.FileHandler(log_file)
+                file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+                file_handler.setFormatter(file_formatter)
+                logger.addHandler(file_handler)
+
             logger.setLevel(logging.DEBUG)
-            logger.addHandler(handler)
             logger.propagate = False
         return logger
