@@ -42,7 +42,7 @@ def pedestrian_map_aligner_test():
     )
 
     map_environment, pedestrian, cars, scaled_box = map_aligner.align()
-    logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)}')
+    logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)} enviornment points')
     logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
     # Visualize the aligned points
 
