@@ -5,12 +5,15 @@ from modules.odometry_aligner import PointCloudOdometryAligner
 from modules.pedestrian_map_aligner import PedestrianMapAligner
 from modules.helpers.align_direction import AlignDirection
 from modules.utils.visualization import PointCloudVisualizer
+from modules.utils.logger import Logger
 
 file_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 loki_path = os.path.normpath(os.path.abspath(os.path.join(file_path, "..", "LOKI")))
-
+logger = None
 
 def odometry_aligner_test():
+    logger.info('Running Odometry Aligner Test...')
+    
     odom_aligner = PointCloudOdometryAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
@@ -18,6 +21,8 @@ def odometry_aligner_test():
     )
 
     odometry_environment, odometry_objects = odom_aligner.align(20, 10, AlignDirection.SPLIT)
+    logger.info(f'Odometry Alignmed Environment Point Cloud with {len(odometry_environment.points)} enviornment points')
+    logger.info(f'Odometry Alignmed Objects Point Cloud with {len(odometry_objects.points)} objects points')
 
     vis = PointCloudVisualizer()
     vis.add_point_cloud(odometry_environment, [0.5, 0.5, 0.5])
@@ -27,6 +32,8 @@ def odometry_aligner_test():
 
 
 def pedestrian_map_aligner_test():
+    logger.info('Running Pedestrian Map Aligner Test...')
+    
     map_aligner = PedestrianMapAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
@@ -35,6 +42,8 @@ def pedestrian_map_aligner_test():
     )
 
     map_environment, pedestrian, cars, scaled_box = map_aligner.align()
+    logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)}')
+    logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
     # Visualize the aligned points
 
     visualizer = PointCloudVisualizer()
@@ -46,7 +55,7 @@ def pedestrian_map_aligner_test():
     visualizer.close()
 
     # save 
-    # maligner.save(os.path.join(loki_path, 'scenario_026'), remove=False)
+    # map_aligner.save(os.path.join(loki_path, 'scenario_026'), remove=False)
 
 
 def main():
@@ -56,4 +65,5 @@ def main():
 
 if __name__ == '__main__':
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    logger = Logger.get_logger(__name__)
     main()
