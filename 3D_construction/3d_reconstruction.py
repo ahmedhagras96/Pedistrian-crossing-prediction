@@ -22,9 +22,10 @@ def odometry_aligner_test():
     )
 
     odometry_environment, odometry_objects = odom_aligner.align(20, 10, AlignDirection.SPLIT)
-    logger.info(f'Odometry Alignmed Environment Point Cloud with {len(odometry_environment.points)} enviornment points')
-    logger.info(f'Odometry Alignmed Objects Point Cloud with {len(odometry_objects.points)} objects points')
+    logger.info(f'Odometry Aligned Environment Point Cloud with {len(odometry_environment.points)} enviornment points')
+    logger.info(f'Odometry Aligned Objects Point Cloud with {len(odometry_objects.points)} objects points')
 
+    # Visualize the aligned points
     vis = PointCloudVisualizer()
     vis.add_point_cloud(odometry_environment, [0.5, 0.5, 0.5])
     vis.add_point_cloud(odometry_objects, color=[1, 0, 0])
@@ -45,8 +46,8 @@ def pedestrian_map_aligner_test():
     map_environment, pedestrian, cars, scaled_box = map_aligner.align()
     logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)} enviornment points')
     logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
+    
     # Visualize the aligned points
-
     visualizer = PointCloudVisualizer()
     visualizer.add_point_cloud(pedestrian, [0.5, 0.5, 1])
     visualizer.add_point_cloud(scaled_box)
