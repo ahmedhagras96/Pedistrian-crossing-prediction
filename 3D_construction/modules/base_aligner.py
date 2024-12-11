@@ -13,10 +13,9 @@ class BaseAligner(ABC):
     Abstract base class for different types of processors.
     """
 
-    def __init__(self, scenario_path: str, loki_csv_path: str, key_frame: int) -> None:
+    def __init__(self, scenario_path: str, loki_csv_path: str) -> None:
         self.scenario_path = scenario_path
         self.loki_csv_path = loki_csv_path
-        self.key_frame = key_frame
         self.max_frames = Reconstuction3DConfig.frames_max_threshold
         self.frame_step = Reconstuction3DConfig.frame_step
         self.loki = LokiDataset(scenario_path, loki_csv_path)

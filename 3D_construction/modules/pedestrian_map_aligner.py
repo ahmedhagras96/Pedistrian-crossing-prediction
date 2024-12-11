@@ -18,33 +18,31 @@ class PedestrianMapAligner(BaseAligner):
     functionality to crop and save point cloud data.
     """
 
-    def __init__(self, scenario_path: str, loki_csv_path: str, num_frames: int, pedestrian_id: str):
+    def __init__(self, scenario_path: str, loki_csv_path: str):
         """
         Initializes the PedestrianMapAligner instance.
 
         Args:
             scenario_path (str): Path to the scenario data directory.
             loki_csv_path (str): Path to the LOKI CSV file containing metadata.
-            num_frames (int): Number of frames to process.
-            pedestrian_id (str): ID of the pedestrian to track and align.
 
         Notes:
             - Initializes necessary attributes and logs the setup.
             - Scenario name is derived from the LOKI scenario ID.
         """
-        super().__init__(scenario_path, loki_csv_path, num_frames)
+        super().__init__(scenario_path, loki_csv_path)
 
-        self.num_frames = num_frames
+        self.num_frames = None
         self.map_pcd = None
         self.frames = None
-        self.pedestrian_id = pedestrian_id
+        self.pedestrian_id = None
         self.scenario_name = f"scenario_{self.loki.scenario_id}"
         self.pedestrian_data = {}
         self.car_data = {}
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
-    def align(self, *args):
+    def align(self, num_frames: int, pedestrian_id: str):
         """
         Aligns and processes the pedestrian and car data within the given frames.
 
@@ -73,6 +71,8 @@ class PedestrianMapAligner(BaseAligner):
             - The pedestrian's scaled bounding box is scaled by a factor of 15.
          """
 
+        self.num_frames = num_frames
+        self.pedestrian_id = pedestrian_id
         self.frames = self._get_relevant_frames()
 
         for frame in self.frames:

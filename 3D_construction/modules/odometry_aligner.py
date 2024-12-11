@@ -19,19 +19,18 @@ class PointCloudOdometryAligner(BaseAligner):
     using odometry data to ensure accurate spatial relationships.
     """
 
-    def __init__(self, scenario_path: str, loki_csv_path: str, key_frame: int):
+    def __init__(self, scenario_path: str, loki_csv_path: str):
         """
         Initializes the PointCloudOdometryAligner with scenario and odometry data.
         
         Args:
             scenario_path (str): Path to the scenario directory containing point cloud and odometry files.
             loki_csv_path (str): Path to the LOKI CSV file containing additional data.
-            key_frame (int): The reference frame index for alignment.
         
         Raises:
             ValueError: If key_frame is negative.
         """
-        super().__init__(scenario_path, loki_csv_path, key_frame)
+        super().__init__(scenario_path, loki_csv_path)
 
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")

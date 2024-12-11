@@ -18,7 +18,6 @@ def odometry_aligner_test():
     odom_aligner = PointCloudOdometryAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
-        key_frame=30
     )
 
     odometry_environment, odometry_objects = odom_aligner.align(20, 10, AlignDirection.SPLIT)
@@ -39,11 +38,9 @@ def pedestrian_map_aligner_test():
     map_aligner = PedestrianMapAligner(
         scenario_path=os.path.join(loki_path, 'scenario_000'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
-        num_frames=1,
-        pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d'
     )
 
-    map_environment, pedestrian, cars, scaled_box = map_aligner.align()
+    map_environment, pedestrian, cars, scaled_box = map_aligner.align(num_frames=1, pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d')
     logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)} enviornment points')
     logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
     
