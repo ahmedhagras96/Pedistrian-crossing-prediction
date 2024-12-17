@@ -1,8 +1,11 @@
+/.idea
+.venv
+
+*.pyc
+*.csv
 
 /LOKI
 /3D_construction/output_directory
 
-.venv
-*.csv
 label3d_modifying.py
 modified_label3d_files
