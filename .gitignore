@@ -1,8 +1,10 @@
+/attention_vector/data
 /.idea
 .venv
 
 *.pyc
 *.csv
+
 
 /LOKI
 /3D_construction/output_directory
