@@ -96,6 +96,7 @@ def split_dataframes(data_frame):
         crossing_split.info()
         non_crossing_split.info()
         print("-" * 50)
+    
     # Optionally, save the split DataFrames to CSV files
     # for (i, j), (crossing_split, non_crossing_split) in split_combinations.items():
     #     crossing_split.to_csv(f'crossing_split_{i}.csv', index=False)
