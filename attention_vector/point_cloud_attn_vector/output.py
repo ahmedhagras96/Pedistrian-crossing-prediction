@@ -31,6 +31,7 @@ def main():
     out, wei = model(points)
 
     print("Output shape:", out.shape)
+    print("Attention Weights shape:", wei.shape)
     
     save_attention_results(out, wei, "LOKI/AttOut.json")
 
