@@ -1,13 +1,14 @@
-/attention_vector/data
 /.idea
 .venv
+.ipynb_checkpoints
 
 *.pyc
 *.csv
-
 
 /LOKI
 /3D_construction/output_directory
 
 label3d_modifying.py
 modified_label3d_files
+
+processed_scenarios
