@@ -193,8 +193,9 @@ class PedestrianMapAligner(BaseAligner):
             if frame_number in self.frames:
                 frame_numbers.append(frame_number)
 
-        # Assert that the extracted frames match the initial list of frames
-        assert set(frame_numbers).issubset(set(self.frames)), "Extracted frames must be a subset of the provided frames."
+        # Assert all frames in self.frames are found
+        missing_frames = set(self.frames) - set(frame_numbers)
+        assert not missing_frames, f"The following frames were not found in the LOKI dataset: {missing_frames}"
 
         self.logger.info(f"Checked frames: {frame_numbers}.")
 
