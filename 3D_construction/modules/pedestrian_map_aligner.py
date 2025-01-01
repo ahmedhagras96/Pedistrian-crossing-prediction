@@ -42,7 +42,7 @@ class PedestrianMapAligner(BaseAligner):
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
-    def align(self, num_frames: int, pedestrian_id: str):
+    def align(self, frame_sequence: list, pedestrian_id: str):
         """
         Aligns and processes the pedestrian and car data within the given frames.
 
@@ -71,9 +71,9 @@ class PedestrianMapAligner(BaseAligner):
             - The pedestrian's scaled bounding box is scaled by a factor of 15.
          """
 
-        self.num_frames = num_frames
         self.pedestrian_id = pedestrian_id
-        self.frames = self._get_relevant_frames()
+        self.frames = frame_sequence
+        self._check_frames()
 
         for frame in self.frames:
             pcd, odom, label3d = self.loki.load_alignment_data(frame)
@@ -147,20 +147,22 @@ class PedestrianMapAligner(BaseAligner):
 
         self.logger.info(f"Saved cropped pedestrian point clouds to: {path_ped}")
 
-    def _get_relevant_frames(self):
+    def _check_frames(self):
         """
-        Retrieves relevant frame numbers from the LOKI CSV.
+        Validates and retrieves relevant frame numbers from the LOKI CSV.
 
-        Filters rows that match the current scenario and pedestrian ID. Limits the 
-        number of extracted frames to the specified `num_frames`.
-
-        Returns:
-            list: A list of relevant frame numbers for processing.
+        Ensures the frames list meets expectations through assertions. Filters rows that match
+        the current scenario and pedestrian ID.
 
         Notes:
             - Logs warnings if no data is found for the scenario or pedestrian ID.
             - Handles invalid frame name formats gracefully.
         """
+        # Assert that frames are provided and are a list of integers
+        assert  isinstance(self.frames, list), "Frames should be a list."
+        assert  all([isinstance(frame, int) for frame in self.frames]), "All frames should be integers."
+        assert  len(self.frames) > 0, "Frames list cannot be empty."
+
         self.logger.info("Loading LOKI CSV data.")
         loki_data = self.loki.load_loki_csv()
         filtered_scenario_data = loki_data[loki_data['video_name'] == self.scenario_name]
@@ -178,9 +180,8 @@ class PedestrianMapAligner(BaseAligner):
             return []
 
         frame_numbers = []
-        frame_count = 0
 
-        self.logger.info(f"Extracting up to {self.num_frames} frame number(s).")
+        self.logger.info(f"Checking frames provided: {self.frames}.")
         for _, row in filtered_pedestrian_data.iterrows():
             frame_name = row['frame_name']
             try:
@@ -189,15 +190,14 @@ class PedestrianMapAligner(BaseAligner):
                 self.logger.error(f"Invalid frame name format: {frame_name}. Skipping.")
                 continue
 
-            frame_numbers.append(frame_number)
-            frame_count += 1
+            if frame_number in self.frames:
+                frame_numbers.append(frame_number)
 
-            if frame_count >= self.num_frames:
-                self.logger.info(f"Reached frame limit: {self.num_frames}. Stopping extraction.")
-                break
+        # Assert that the extracted frames match the initial list of frames
+        assert set(frame_numbers).issubset(set(self.frames)), "Extracted frames must be a subset of the provided frames."
 
-        self.logger.info(f"Extracted {len(frame_numbers)} frame numbers: {frame_numbers}.")
-        return frame_numbers
+        self.logger.info(f"Checked frames: {frame_numbers}.")
+
 
     def _crop(self, frame: int, remove: bool):
         """

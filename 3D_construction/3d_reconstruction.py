@@ -40,9 +40,9 @@ def pedestrian_map_aligner_test():
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
     )
 
-    map_environment, pedestrian, cars, scaled_box = map_aligner.align(num_frames=1, pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d')
-    logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)} enviornment points')
-    logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
+    map_environment, pedestrian, cars, scaled_box = map_aligner.align(frame_sequence=[38,40,42], pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d')
+    logger.info(f'Map Aligned Environment Point Cloud with {len(map_environment.points)} enviornment points')
+    logger.info(f'Map Aligned Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points for the last frame of the sequence (for visualization)')
     
     # Visualize the aligned points
     visualizer = PointCloudVisualizer()
@@ -54,7 +54,7 @@ def pedestrian_map_aligner_test():
     visualizer.close()
 
     # save 
-    # map_aligner.save(os.path.join(loki_path, 'scenario_026'), remove=False)
+    # map_aligner.save(os.path.join(loki_path, 'scenario_000'), remove=False)
 
 
 def main():
