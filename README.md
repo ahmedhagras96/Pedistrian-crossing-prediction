@@ -1,9 +1,8 @@
-
 # Pedestrian Crossing Prediction Using Loki Dataset
 
 This repository implements a pedestrian crossing prediction system using data from the Loki dataset. The system leverages 3D reconstruction, attention mechanisms, and pedestrian feature extraction to predict whether pedestrians will cross a street. Below is the framework used for the system:
 
-![Framework Design](./assets/MyFramework.png)
+![Framework Design](./assets/framework.png)
 
 ---
 
@@ -32,6 +31,7 @@ The goal of this project is to predict pedestrian crossing behavior using point 
 ## Inputs
 
 The system relies on three main inputs:
+
 1. **3D Reconstruction**: Processed point clouds from the Loki dataset.
 2. **Pedestrian Model**: Key points extracted directly from the 3D pedestrian representation.
 3. **2D and 3D Features**: Extracted from pedestrian images and 3D pedestrian key points.
@@ -55,11 +55,13 @@ The system relies on three main inputs:
 ## Dataset Structure
 
 ### Loki Dataset
+
 - **Point Clouds**: 3D environment scans of pedestrian interactions.
 - **3D Labels**: Provides pedestrian positions (`track_id`) in the local coordinate system.
 - **Odometry**: Used to relate pedestrian positions to the ego-car frame.
 
 ### File Naming Convention
+
 - `label3d_00002.txt` and `odom_0002.txt` are matched by their ID.
 
 ---
@@ -67,6 +69,7 @@ The system relies on three main inputs:
 ## How It Works
 
 1. **Prediction Pipeline**:
+
    - Processes raw point clouds.
    - Extracts features from 2D and 3D pedestrian representations.
    - Applies a feature fusion and attention pipeline.
