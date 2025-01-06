@@ -42,7 +42,7 @@ The system relies on three main inputs:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo-url.git
+   git clone https://github.com/ahmedhagras96/Pedistrian-crossing-prediction.git
    cd pedestrian-crossing-prediction
    ```
 2. Install dependencies:
