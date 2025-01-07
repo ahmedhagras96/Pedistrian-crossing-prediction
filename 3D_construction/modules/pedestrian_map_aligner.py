@@ -122,8 +122,8 @@ class PedestrianMapAligner(BaseAligner):
         """
         # Ensure the save directory exists
         os.makedirs(save_path, exist_ok=True)
-        path_ped = os.path.join(save_path, f"ped_{self.pedestrian_id}")
-        os.makedirs(path_ped, exist_ok=True)
+        # path_ped = os.path.join(save_path, f"ped_{self.pedestrian_id}")
+        # os.makedirs(path_ped, exist_ok=True)
 
         for frame in self.frames:
             try:
@@ -137,7 +137,7 @@ class PedestrianMapAligner(BaseAligner):
                     raise TypeError(f"Invalid point cloud type: {type(cropped_pcd)}")
 
                 # Save the cropped point cloud to a file
-                file_path = os.path.join(path_ped, f"frame_{frame}.ply")
+                file_path = os.path.join(save_path, f"ped_{self.pedestrian_id}_frame_{frame}.ply")
                 success = o3d.io.write_point_cloud(file_path, cropped_pcd, write_ascii=True)
                 if not success:
                     raise RuntimeError(f"Failed to write point cloud to {file_path}")
@@ -145,7 +145,7 @@ class PedestrianMapAligner(BaseAligner):
             except Exception as e:
                 self.logger.error(f"Failed to process frame {frame}: {e}")
 
-        self.logger.info(f"Saved cropped pedestrian point clouds to: {path_ped}")
+        self.logger.info(f"Saved cropped pedestrian point clouds to: {save_path}")
 
     def _check_frames(self):
         """

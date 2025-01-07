@@ -54,11 +54,11 @@ def pedestrian_map_aligner_test():
     visualizer.close()
 
     # save 
-    # map_aligner.save(os.path.join(loki_path, 'scenario_000'), remove=False)
+    map_aligner.save(os.path.join(loki_path, 'scenario_000_reconstructed'), remove=False)
 
 
 def main():
-    odometry_aligner_test()
+    # odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 
