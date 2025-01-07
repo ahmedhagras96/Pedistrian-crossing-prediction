@@ -36,29 +36,24 @@ def pedestrian_map_aligner_test():
     logger.info('Running Pedestrian Map Aligner Test...')
     
     map_aligner = PedestrianMapAligner(
-        scenario_path=os.path.join(loki_path, 'scenario_000'),
+        scenario_path=os.path.join(loki_path, 'scenario_026'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
     )
 
-    map_environment, pedestrian, cars, scaled_box = map_aligner.align(frame_sequence=[38,40,42], pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d')
-    logger.info(f'Map Aligned Environment Point Cloud with {len(map_environment.points)} enviornment points')
-    logger.info(f'Map Aligned Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points for the last frame of the sequence (for visualization)')
-    
-    # Visualize the aligned points
-    visualizer = PointCloudVisualizer()
-    visualizer.add_point_cloud(pedestrian, [0.5, 0.5, 1])
-    visualizer.add_point_cloud(scaled_box)
-    visualizer.add_point_cloud(cars, [1, 0.5, 0.5])
-    visualizer.add_point_cloud(map_environment)
-    visualizer.run()
-    visualizer.close()
+    # This is the format that is supported by the MapAligner
+    ID_to_FR = {
+        "4ff8af4d-6840-47c2-bc9b-eb383009ad65":[0,2,8],
+        "624e3a59-7b6f-4674-a223-41966cdfa39a":[6,10],
+        "6415887d-665b-40d7-8676-99074d06be6d":[64,66]
+        }
+    SavePath = os.path.join(loki_path, 'scenario_026_reconstructed')
 
-    # save 
-    map_aligner.save(os.path.join(loki_path, 'scenario_000_reconstructed'), remove=False)
+    map_aligner.align(ID_to_FR=ID_to_FR, save=True, use_downsampling=True ,save_path=SavePath, scale = 20)
+   
 
 
 def main():
-    # odometry_aligner_test()
+    odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 

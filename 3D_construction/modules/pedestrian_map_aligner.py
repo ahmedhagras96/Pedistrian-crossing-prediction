@@ -33,7 +33,7 @@ class PedestrianMapAligner(BaseAligner):
         super().__init__(scenario_path, loki_csv_path)
 
         self.num_frames = None
-        self.map_pcd = None
+        self.map_pcd = o3d.io.read_point_cloud(os.path.join(self.scenario_path, 'map.ply'))
         self.frames = None
         self.pedestrian_id = None
         self.scenario_name = f"scenario_{self.loki.scenario_id}"
@@ -42,7 +42,11 @@ class PedestrianMapAligner(BaseAligner):
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
-    def align(self, frame_sequence: list, pedestrian_id: str):
+    def align(
+        self,  ID_to_FR: dict, 
+        save: bool = False, use_downsampling: bool = False,
+        save_path: str = None, scale: int = 25
+        ):
         """
         Aligns and processes the pedestrian and car data within the given frames.
 
@@ -51,14 +55,10 @@ class PedestrianMapAligner(BaseAligner):
         scaled bounding boxes and point clouds for the pedestrian and cars.
 
         Args:
-            *args: Additional arguments for extensibility (currently not used).
-
-        Returns:
-            tuple:
-                - map_pcd (o3d.geometry.PointCloud): The point cloud of the map from the scenario.
-                - ped_ply (o3d.geometry.PointCloud): The point cloud of the target pedestrian.
-                - cars_ply (o3d.geometry.PointCloud): The combined point cloud of all cars in the last frame.
-                - scaled_box (o3d.geometry.OrientedBoundingBox): The scaled bounding box of the pedestrian.
+            ID_to_FR (dict): Mapping of pedestrian IDs to frame sequences.
+            save (bool): Indicates whether to save the cropped point clouds.
+            save_path (str): Directory path where the cropped point clouds will be saved.
+            scale (int): Factor to scale the bounding boxes for cropping.
 
         Raises:
             KeyError: If expected columns are missing from the `label3d` DataFrame.
@@ -70,65 +70,85 @@ class PedestrianMapAligner(BaseAligner):
               for different use cases.
             - The pedestrian's scaled bounding box is scaled by a factor of 15.
          """
+        self.use_downsampling = use_downsampling
+        
+        # Iterate over each pedestrian ID and their corresponding frame sequences
+        for pedestrian_id, frame_sequence in ID_to_FR.items():  
+            self.logger.info(f"Processing pedestrian {pedestrian_id}")
 
-        self.pedestrian_id = pedestrian_id
-        self.frames = frame_sequence
-        self._check_frames()
+            self.pedestrian_id = pedestrian_id
+            self.frames = frame_sequence
 
-        for frame in self.frames:
-            pcd, odom, label3d = self.loki.load_alignment_data(frame)
-            objects = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
-            target_pedestrian_exists = objects[objects['track_id'].isin([self.pedestrian_id])].shape[0] > 0
-            if target_pedestrian_exists:
-                transformation_matrix = self.get_transformation_matrix(odom)
+            self._check_frames()
 
-                for _, obj_row in objects.iterrows():
-                    dimensions = [float(obj_row[col]) for col in obj_row.index[3:10]]
-                    center_box, yaw, (l, w, h) = dimensions[:3], dimensions[6], dimensions[3:6]
-                    yaw_matrix = PointCloudUtils.get_yaw_matrix(yaw)
+            for frame in self.frames:
+                pcd, odom, label3d = self.loki.load_alignment_data(frame)
 
-                    bounding_box_o3d = o3d.geometry.OrientedBoundingBox(center_box, yaw_matrix, [l, w, h])
-                    points_ix = bounding_box_o3d.get_point_indices_within_bounding_box(pcd.points)
-                    obj_ply = pcd.select_by_index(points_ix)
-                    obj_ply.transform(transformation_matrix)
-                    obj_points = np.asarray(obj_ply.points)
-                    scaled_box = bounding_box_o3d.scale(25, bounding_box_o3d.get_center())
+                # Filter for relevant objects (car and pedestrian)
+                objects = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
 
-                    if obj_row['labels'] == 'Pedestrian' and obj_row['track_id'] == self.pedestrian_id:
-                        self.pedestrian_data[frame] = obj_points, scaled_box
-                    elif obj_row['labels'] == 'Car':
-                        self.car_data.setdefault(frame, []).append(obj_points)
+                target_pedestrian_exists = objects[objects['track_id'].isin([self.pedestrian_id])].shape[0] > 0
 
-        last_frame = self.frames[-1]
-        ped_points, bounding_box_scaled = self.pedestrian_data[last_frame]
-        car_points = self.car_data[last_frame]
-        ped_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(ped_points))
-        cars_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(np.concatenate(car_points, axis=0)))
-        self.map_pcd = o3d.io.read_point_cloud(os.path.join(self.scenario_path, 'map.ply'))
-        return self.map_pcd, ped_ply, cars_ply, bounding_box_scaled
+                if target_pedestrian_exists:
+                    transformation_matrix = self.get_transformation_matrix(odom)
 
-    def save(self, save_path: str, remove: bool = False):
+                    # Iterate over each object in the frame
+                    for _, obj_row in objects.iterrows():
+                        dimensions = [float(obj_row[col]) for col in obj_row.index[3:10]]
+                        center_box, yaw, (l, w, h) = dimensions[:3], dimensions[6], dimensions[3:6]
+                        yaw_matrix = PointCloudUtils.get_yaw_matrix(yaw)
+
+                        bounding_box_o3d = o3d.geometry.OrientedBoundingBox(center_box, yaw_matrix, [l, w, h])
+
+                        points_ix = bounding_box_o3d.get_point_indices_within_bounding_box(pcd.points)
+
+                        obj_ply = pcd.select_by_index(points_ix)
+                        obj_ply.transform(transformation_matrix)
+
+                        obj_points = np.asarray(obj_ply.points)
+                        scaled_box = bounding_box_o3d.scale(scale, bounding_box_o3d.get_center())
+
+                        if obj_points.size == 0:
+                            self.logger.warning(f"Pedestrian {self.pedestrian_id} not found in frame: {frame}...Skipping")
+                            continue
+
+                        if obj_row['labels'] == 'Pedestrian' and obj_row['track_id'] == self.pedestrian_id:
+                            self.pedestrian_data[frame] = obj_points, scaled_box
+                        elif obj_row['labels'] == 'Car':
+                            self.car_data.setdefault(frame, []).append(obj_points)          
+
+            # Save the cropped point clouds if requested
+            if save:
+                self.save(save_path=save_path)
+
+        # Return the map, pedestrian, and car point clouds and the scaled bounding box, handling of returned values is required when calling the align method 
+        # last_frame = self.frames[-1]
+        # ped_points, bounding_box_scaled = self.pedestrian_data[last_frame]
+        # car_points = self.car_data[last_frame]
+        # ped_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(ped_points))
+        # cars_ply = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(np.concatenate(car_points, axis=0)))
+        # self.map_pcd = o3d.io.read_point_cloud(os.path.join(self.scenario_path, 'map.ply'))
+        # return self.map_pcd, ped_ply, cars_ply, bounding_box_scaled
+
+    def save(self, save_path: str):
         """
         Saves the cropped pedestrian point clouds.
 
         Args:
             save_path (str): Directory path where the cropped point clouds will be saved.
-            remove (bool): Whether to remove the cropped region from the original map.
 
         Notes:
             - Creates directories if they do not exist.
             - Saves point clouds for each processed frame in the specified directory.
-            - Each frame's point cloud is saved in a separate file named `frame_<frame_number>.ply`.
+            - Each frame's point cloud is saved in a separate file named `ped_<Ped_ID>_frame_<frame_number>.ply`.
         """
         # Ensure the save directory exists
         os.makedirs(save_path, exist_ok=True)
-        # path_ped = os.path.join(save_path, f"ped_{self.pedestrian_id}")
-        # os.makedirs(path_ped, exist_ok=True)
 
         for frame in self.frames:
             try:
                 # Crop the point cloud for the pedestrian in the current frame
-                cropped_pcd = self._crop(frame, remove)
+                cropped_pcd = self._crop(frame)
 
                 # Ensure the cropped point cloud is a valid Open3D PointCloud object
                 if isinstance(cropped_pcd, np.ndarray):
@@ -145,7 +165,6 @@ class PedestrianMapAligner(BaseAligner):
             except Exception as e:
                 self.logger.error(f"Failed to process frame {frame}: {e}")
 
-        self.logger.info(f"Saved cropped pedestrian point clouds to: {save_path}")
 
     def _check_frames(self):
         """
@@ -200,13 +219,12 @@ class PedestrianMapAligner(BaseAligner):
         self.logger.info(f"Checked frames: {frame_numbers}.")
 
 
-    def _crop(self, frame: int, remove: bool):
+    def _crop(self, frame: int):
         """
         Crops the map point cloud to the pedestrian's bounding box.
 
         Args:
             frame (int): Frame number to crop.
-            remove (bool): Whether to remove the cropped region from the original map.
 
         Returns:
             o3d.geometry.PointCloud: The cropped point cloud.
@@ -217,8 +235,19 @@ class PedestrianMapAligner(BaseAligner):
         self.logger.info(f"Cropping the map to the bounding box of the pedestrian in frame: {frame}.")
         ped_points, bounding_box_o3d = self.pedestrian_data[frame]
         car_points = self.car_data[frame]
+        
+        # Ensure the data types are as expected
+        assert isinstance(ped_points, np.ndarray) and isinstance(bounding_box_o3d, o3d.geometry.OrientedBoundingBox) and isinstance(car_points, list), "Invalid data types."
+        
+        if self.use_downsampling:
+            self.map_pcd = self.map_pcd.voxel_down_sample(voxel_size=Reconstuction3DConfig.voxel_size)
+        
         concat_points = np.concatenate(
-            [ped_points, np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], axis=0)
+                [ped_points, np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], axis=0
+                )
         concat_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(concat_points))
-        cropped_pcd = concat_pcd.crop(bounding_box_o3d, invert=remove)
+        cropped_pcd = concat_pcd.crop(bounding_box_o3d, invert=False)
+        
+        self.logger.info(f"Finished cropping, {len(cropped_pcd.points)} points for frame: {frame}.")
+
         return cropped_pcd
