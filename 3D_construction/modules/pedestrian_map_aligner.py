@@ -20,7 +20,7 @@ class PedestrianMapAligner(BaseAligner):
     functionality to crop and save point cloud data.
     """
 
-    def __init__(self, scenario_path: str, loki_csv_path: str, loki_folder_path: str):
+    def __init__(self, scenario_path: str, loki_csv_path: str, data_path: str):
         """
         Initializes the PedestrianMapAligner instance.
 
@@ -36,7 +36,7 @@ class PedestrianMapAligner(BaseAligner):
         super().__init__(scenario_path, loki_csv_path)
 
         self.num_frames = None
-        self.loki_folder_path = loki_folder_path
+        self.loki_folder_path = data_path
         self.map_pcd = None
         self.frames = None
         self.pedestrian_id = None

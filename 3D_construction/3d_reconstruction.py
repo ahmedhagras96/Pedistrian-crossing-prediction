@@ -38,7 +38,7 @@ def pedestrian_map_aligner_test():
     map_aligner = PedestrianMapAligner(
         scenario_path=None, #os.path.join(loki_path, 'scenario_026'),
         loki_csv_path=os.path.join(loki_path, 'avatar_filtered_pedistrians.csv'),
-        loki_folder_path=loki_path
+        data_path=loki_path
     )
 
     SavePath = os.path.join(loki_path, 'training_data/3d_constructed')
@@ -48,8 +48,8 @@ def pedestrian_map_aligner_test():
 
 
 def main():
-    # odometry_aligner_test()
-    pedestrian_map_aligner_test()
+    odometry_aligner_test()
+    # pedestrian_map_aligner_test()
 
 
 if __name__ == '__main__':
