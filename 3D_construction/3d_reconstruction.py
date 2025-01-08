@@ -38,22 +38,17 @@ def pedestrian_map_aligner_test():
     map_aligner = PedestrianMapAligner(
         scenario_path=os.path.join(loki_path, 'scenario_026'),
         loki_csv_path=os.path.join(loki_path, 'loki.csv'),
+        loki_folder_path=loki_path
     )
 
-    # This is the format that is supported by the MapAligner
-    ID_to_FR = {
-        "4ff8af4d-6840-47c2-bc9b-eb383009ad65":[0,2,8],
-        "624e3a59-7b6f-4674-a223-41966cdfa39a":[6,10],
-        "6415887d-665b-40d7-8676-99074d06be6d":[64,66]
-        }
-    SavePath = os.path.join(loki_path, 'scenario_026_reconstructed')
+    SavePath = os.path.join(loki_path, 'training_data/3d_constructed')
 
-    map_aligner.align(ID_to_FR=ID_to_FR, save=True, use_downsampling=True ,save_path=SavePath, scale = 20)
+    map_aligner.align(save=True, use_downsampling=True, save_path=SavePath, scale = 20)
    
 
 
 def main():
-    odometry_aligner_test()
+    # odometry_aligner_test()
     pedestrian_map_aligner_test()
 
 

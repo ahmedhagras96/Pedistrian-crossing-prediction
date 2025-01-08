@@ -30,11 +30,11 @@ class LokiDataset:
             scenario_path (str): Path of the scenario (e.g., 'scenario_026').
             loki_csv_path (str): Base path to the loki.csv file.
                     """
-        self.scenario_path = scenario_path
-        self.scenario_id = re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1)
+        self.scenario_path = None #scenario_path
+        self.scenario_id = None #re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1)
         self.loki_csv_path = loki_csv_path
 
-        LokiDataset.logger.info(f"Initialized {self.__class__.__name__} for scenario: {self.scenario_id}")
+        # LokiDataset.logger.info(f"Initialized {self.__class__.__name__} for scenario: {self.scenario_id}")
 
     def load_ply(self, frame_index: int) -> Optional[o3d.geometry.PointCloud]:
         """
@@ -130,7 +130,7 @@ class LokiDataset:
             LokiDataset.logger.error(f"Failed to load label3d for frame {frame_index}: {e}")
             return None
 
-    def load_alignment_data(self, frame_index: int) -> Optional[Tuple[Any, Any, Any]]:
+    def load_alignment_data(self, frame_index: int, scenario_path: str) -> Optional[Tuple[Any, Any, Any]]:
         """
         Loads the point cloud, odometry, and label 3d data for the specified frame index.
 
@@ -141,7 +141,11 @@ class LokiDataset:
             Optional[Dict[str, any]]: Dictionary containing 'point_cloud', 'odometry', and 'label3d' keys
             with their respective loaded data, or None if any loading fails.
         """
-        LokiDataset.logger.info(f"Loading all data for frame {frame_index}")
+        scenario_id = re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1)
+        LokiDataset.logger.info(f"Loading all data for frame {frame_index} in scenario_id: {scenario_id}")
+        # LokiDataset.logger.info(f"Initialized {self.__class__.__name__} for scenario: {self.scenario_id}")
+
+        self.scenario_path = scenario_path
 
         pcd = self.load_ply(frame_index)
         odometry = self.load_odometry(frame_index)
