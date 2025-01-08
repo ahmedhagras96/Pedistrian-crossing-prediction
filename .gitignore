@@ -8,7 +8,11 @@
 /LOKI
 /3D_construction/output_directory
 
-label3d_modifying.py
-modified_label3d_files
+__pycache__
 
+debugging
+modified_label3d_files
 processed_scenarios
+Loki_labeled_images
+training_data
+features_extraction/__pycache__/utils.cpython-39.pyc

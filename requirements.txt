@@ -1,5 +1,5 @@
 numpy==1.24
 open3d==0.18.0
 pandas==2.2.3
-
+plyfile==1.1
 scikit_learn==1.5.2

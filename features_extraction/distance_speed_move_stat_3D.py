@@ -3,9 +3,9 @@ import math
 import json
 import pandas as pd
 import copy
-from utils import *
+from .utils import *
 
-def get_speed_dist_ms_scenario(scenario_path, scenario_name):
+def get_speed_dist_ms_scenario(scenario_path,fps):
     """
     Process a single scenario to extract features for each pedestrian,
     including corrections for initial "Unknown" movement status.
@@ -32,14 +32,6 @@ def get_speed_dist_ms_scenario(scenario_path, scenario_name):
         ego_position = parse_odometry(odom_path)
         pedestrians = parse_labels(label_path)
 
-        # Calculate ego movement delta (if applicable)
-        ego_delta = 0
-        if perv_ego_position:
-            ego_delta = math.sqrt(
-                (ego_position["x"] - perv_ego_position["x"])**2 +
-                (ego_position["y"] - perv_ego_position["y"])**2
-            )
-
         # Collect features for this frame
         frame_features = {}
 
@@ -54,7 +46,7 @@ def get_speed_dist_ms_scenario(scenario_path, scenario_name):
                 # Calculate speed, distance, and movement status
                 prev_position = previous_positions[ped_id]
                 speed, distance, movement_status = calculate_speed_distance_movement(
-                    prev_position, (ped_x, ped_y), ego_delta
+                    prev_position, (ped_x, ped_y),perv_ego_position,ego_position,fps
                 )
 
                 # Remove pending corrections for this pedestrian if applicable
@@ -90,36 +82,34 @@ def get_speed_dist_ms_scenario(scenario_path, scenario_name):
     return scenario_features
 
 
-def process_all_scenarios(root_directory,output_directory):
-    """
-    Process all scenarios in the dataset to get speed, distance and movment status for each
-    pedistrian and save results in JSON files in the `output_features` folder.
-    """
-    # Ensure the output directory exists
-    # output_directory = os.path.join(root_directory, "output_features")
-    os.makedirs(output_directory, exist_ok=True)
+# def process_all_scenarios(root_directory,output_directory):
+#     """
+#     Process all scenarios in the dataset to get speed, distance and movment status for each
+#     pedistrian and save results in JSON files in the `output_features` folder.
+#     """
+#     # Ensure the output directory exists
+#     # output_directory = os.path.join(root_directory, "output_features")
+#     os.makedirs(output_directory, exist_ok=True)
 
-    for scenario in os.listdir(root_directory):
-        scenario_path = os.path.join(root_directory, scenario)
-        if not os.path.isdir(scenario_path):
-            continue
+#     for scenario in os.listdir(root_directory):
+#         scenario_path = os.path.join(root_directory, scenario)
+#         if not os.path.isdir(scenario_path):
+#             continue
 
-        print(f"Processing scenario: {scenario}...")
-        # Process the scenario
-        scenario_features = get_speed_dist_ms_scenario(scenario_path, scenario)
+#         print(f"Processing scenario: {scenario}...")
+#         # Process the scenario
+#         scenario_features = get_speed_dist_ms_scenario(scenario_path, scenario,5)
 
-        # Save scenario features to a JSON file
-        output_path = os.path.join(output_directory, f"{scenario}_features.json")
-        with open(output_path, "w") as json_file:
-            json.dump(scenario_features, json_file, indent=4)
+#         # Save scenario features to a JSON file
+#         output_path = os.path.join(output_directory, f"{scenario}_features.json")
+#         with open(output_path, "w") as json_file:
+#             json.dump(scenario_features, json_file, indent=4)
 
-        print(f"Saved features for {scenario} to {output_path}")
+#         print(f"Saved features for {scenario} to {output_path}")
 
 
 
-# Run the processing function
-output_directory = "./processed_scenarios/output_features_Speed & Distance"
-root_directory = "LOKI"
-process_all_scenarios(root_directory,output_directory)
-
-print("Analysis complete. Results saved to 'pedestrian_analysis.csv'.")
+# # Run the processing function
+# output_directory = "./processed_scenarios/output_features_Speed & Distance"
+# root_directory = "LOKI"
+# process_all_scenarios(root_directory,output_directory)

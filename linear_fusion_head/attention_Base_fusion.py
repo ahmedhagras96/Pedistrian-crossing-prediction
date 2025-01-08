@@ -3,36 +3,54 @@ import torch.nn as nn
 from base_fusion_head import BaseFusionHead
 
 class AttentionFusionHead(BaseFusionHead):
-    def __init__(self, feature_dim, num_heads=4, output_dim=1):
+    def __init__(self, vector_dim=64, num_heads=4):
         """
-        Attention-based fusion head.
+        End-to-end neural network with attention-based fusion.
 
         Args:
-            feature_dim (int): Dimensionality of input features.
-            num_heads (int): Number of attention heads.
-            output_dim (int): Output dimensionality (default: 1 for binary classification).
+            vector_dim (int): Dimensionality of attention vectors from each source (default: 64).
+            num_heads (int): Number of attention heads for fusion.
         """
-        super(AttentionFusionHead, self).__init__(feature_dim)
-        self.attention = nn.MultiheadAttention(embed_dim=feature_dim, num_heads=num_heads)
-        self.fc1 = nn.Linear(feature_dim, 128)
+        super(AttentionFusionHead, self).__init__()
+
+        # Attention-based fusion layer
+        self.fusion_attention = nn.MultiheadAttention(embed_dim=vector_dim, num_heads=num_heads)
+
+        # Fully connected layers after fusion
+        self.fc1 = nn.Linear(vector_dim, 128)
         self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, output_dim)
+        self.fc3 = nn.Linear(64, 1)
+
+        # Activation and dropout
         self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.2)
         self.sigmoid = nn.Sigmoid()
 
-    def forward(self, *inputs):
+    def forward(self, source1, source2, source3):
         """
-        Forward pass for attention-based fusion.
+        Forward pass of the network.
 
         Args:
-            inputs: List of input tensors to process with attention.
+            source1 (torch.Tensor): Attention vectors from 3D constructed data (batch_size, seq_len, vector_dim).
+            source2 (torch.Tensor): Attention vectors from 3D pedestrian point cloud (batch_size, seq_len, vector_dim).
+            source3 (torch.Tensor): Attention vectors from pedestrian features (batch_size, seq_len, vector_dim).
 
         Returns:
-            torch.Tensor: Output of the fusion head.
+            torch.Tensor: Binary classification output (batch_size, 1).
         """
-        # Assuming inputs are already aligned; concatenate for attention
-        concatenated = torch.cat([self.flatten(x) for x in inputs], dim=1).unsqueeze(0)
-        attn_output, _ = self.attention(concatenated, concatenated, concatenated)
-        x = self.relu(self.fc1(attn_output.squeeze(0)))
+        # Concatenate inputs along the sequence dimension
+        concatenated_inputs = torch.cat([source1, source2, source3], dim=1)  # (batch_size, 3 * seq_len, vector_dim)
+
+        # Apply attention-based fusion
+        fusion_output, _ = self.fusion_attention(concatenated_inputs, concatenated_inputs, concatenated_inputs)  # (batch_size, 3 * seq_len, vector_dim)
+
+        # Average pooling across the sequence length
+        pooled_output = torch.mean(fusion_output, dim=1)  # (batch_size, vector_dim)
+
+        # Fully connected layers
+        x = self.relu(self.fc1(pooled_output))
+        x = self.dropout(x)
         x = self.relu(self.fc2(x))
-        return self.sigmoid(self.fc3(x))
+        output = self.sigmoid(self.fc3(x))  # (batch_size, 1)
+
+        return output

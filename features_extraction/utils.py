@@ -17,21 +17,53 @@ def parse_labels(file_path):
                 pedestrians[ped_id] = {"x": pos_x, "y": pos_y}
     return pedestrians
 
-def calculate_speed_distance_movement(prev_position, curr_position, ego_delta):
+def calculate_speed_distance_movement(ped_coords_frame1, ped_coords_frame2,ego_odom_frame1, ego_odom_frame2, fps):
     """
-    Calculate speed, distance, and movement status for a pedestrian relative to the ego vehicle.
+    Calculate pedestrian speed between two frames.
+
+    Parameters:
+        ego_odom_frame1: dict with 'x', 'y' for frame 1.
+        ego_odom_frame2: dict with 'x', 'y' for frame 2.
+        ped_coords_frame1: tuple (x, y) for pedestrian in frame 1.
+        ped_coords_frame2: tuple (x, y) for pedestrian in frame 2.
+        fps: Frames per second (e.g., 3 or 5).
+
+    Returns:
+        speed: Pedestrian speed in units per second.
     """
-    ped_x, ped_y = curr_position
-    prev_x, prev_y = prev_position
 
-    # Distance calculation
-    distance = math.sqrt(ped_x**2 + ped_y**2)
+    # Ego car positions
+    ego_x1, ego_y1 = ego_odom_frame1['x'], ego_odom_frame1['y']
+    ego_x2, ego_y2 = ego_odom_frame2['x'], ego_odom_frame2['y']
 
-    # Speed calculation
-    movement = math.sqrt((ped_x - prev_x)**2 + (ped_y - prev_y)**2)
-    adjusted_speed = max(0, movement - ego_delta)  # Adjust for ego movement
+    
+    # Pedestrian positions in frames 1 and 2
+    ped_x1, ped_y1 = ped_coords_frame1
+    ped_x2, ped_y2 = ped_coords_frame2
+
+    # current_pedistrian Distance calculation
+    ped_distance = math.sqrt(ped_x2**2 + ped_y2**2)
+
+    # Compute pedestrian relative position in frame 2
+    relative_x2 = ped_x2 - ego_x2
+    relative_y2 = ped_y2 - ego_y2
+
+    #difference in current and pervious ego postion
+    diff_x_ego = ego_x2 - ego_x1
+    diff_y_ego = ego_y2 - ego_y1
+
+    # Transform relative position to frame 1 coordinate system
+    adjusted_x2 = relative_x2 + ego_x1 + diff_x_ego
+    adjusted_y2 = relative_y2 + ego_y1 + diff_y_ego
+
+    # Compute distance between pedestrian positions
+    distance = math.sqrt((adjusted_x2 - ped_x1)**2 + (adjusted_y2 - ped_y1)**2)
+    
+    # Calculate speed
+    time_interval = 1 / fps
+    speed = distance / time_interval
 
     # Movement status
-    movement_status = "Stopped" if adjusted_speed < 0.25 else "Moving"
-
-    return adjusted_speed, distance, movement_status
+    movement_status = "Stopped" if speed < 0.25 else "Moving"
+    
+    return speed,ped_distance,movement_status
