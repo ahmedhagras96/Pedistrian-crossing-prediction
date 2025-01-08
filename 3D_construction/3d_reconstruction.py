@@ -36,30 +36,20 @@ def pedestrian_map_aligner_test():
     logger.info('Running Pedestrian Map Aligner Test...')
     
     map_aligner = PedestrianMapAligner(
-        scenario_path=os.path.join(loki_path, 'scenario_000'),
-        loki_csv_path=os.path.join(loki_path, 'loki.csv'),
+        scenario_path=None, #os.path.join(loki_path, 'scenario_026'),
+        loki_csv_path=os.path.join(loki_path, 'avatar_filtered_pedistrians.csv'),
+        data_path=loki_path
     )
 
-    map_environment, pedestrian, cars, scaled_box = map_aligner.align(num_frames=1, pedestrian_id='4ab64275-275c-4f58-8ed5-39837a4a265d')
-    logger.info(f'Map Alignmed Environment Point Cloud with {len(map_environment.points)} enviornment points')
-    logger.info(f'Map Alignmed Objects Point Cloud with {len(pedestrian.points)} pedestrian points, {len(cars.points)} car points')
-    
-    # Visualize the aligned points
-    visualizer = PointCloudVisualizer()
-    visualizer.add_point_cloud(pedestrian, [0.5, 0.5, 1])
-    visualizer.add_point_cloud(scaled_box)
-    visualizer.add_point_cloud(cars, [1, 0.5, 0.5])
-    visualizer.add_point_cloud(map_environment)
-    visualizer.run()
-    visualizer.close()
+    SavePath = os.path.join(loki_path, 'training_data/3d_constructed')
 
-    # save 
-    # map_aligner.save(os.path.join(loki_path, 'scenario_026'), remove=False)
+    map_aligner.align(save=True, use_downsampling=True, save_path=SavePath, scaling_factor = 20)
+   
 
 
 def main():
     odometry_aligner_test()
-    pedestrian_map_aligner_test()
+    # pedestrian_map_aligner_test()
 
 
 if __name__ == '__main__':
