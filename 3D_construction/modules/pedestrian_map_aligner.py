@@ -1,4 +1,5 @@
 ﻿import os
+import time
 
 import open3d as o3d
 import numpy as np
@@ -7,6 +8,7 @@ from .base_aligner import BaseAligner
 from .utils.logger import Logger
 from .utils.pointcloud_utils import PointCloudUtils
 from .utils.recon_3d_config import Reconstuction3DConfig
+from .utils.threading import ThreadedSaveManager
 
 
 class PedestrianMapAligner(BaseAligner):
@@ -41,13 +43,14 @@ class PedestrianMapAligner(BaseAligner):
         self.scenario_name = None 
         self.pedestrian_data = {}
         self.car_data = {}
+        self.save_manager = ThreadedSaveManager()
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
     def align(
         self, 
         save: bool = False, use_downsampling: bool = False,
-        save_path: str = None, scale: int = 25
+        save_path: str = None, scaling_factor: int = 25
         ):
         """
         Aligns and processes the pedestrian and car data within the given frames.
@@ -73,14 +76,20 @@ class PedestrianMapAligner(BaseAligner):
          """
         self.use_downsampling = use_downsampling
         scenario_to_ped_to_frames = self._get_relevant_frames()
-        
+        total_save_time = 0
+        start_time = time.time()
+
         for scenario_name, ID_to_FR in scenario_to_ped_to_frames.items():
+
             self.scenario_name = scenario_name
             scenario_path = os.path.join(self.loki_folder_path, scenario_name)
             self.map_pcd = o3d.io.read_point_cloud(os.path.join(scenario_path, 'map.ply'))
-            for pedestrian_id, frame_sequence in ID_to_FR.items():  
-                self.logger.info(f"Processing pedestrian {pedestrian_id}")
+            scenario_cropped_pcds = []
 
+           
+            for pedestrian_id, frame_sequence in ID_to_FR.items():  
+                
+                self.logger.info(f"Processing pedestrian {pedestrian_id}")
                 self.pedestrian_id = pedestrian_id
                 self.frames = frame_sequence
 
@@ -109,56 +118,44 @@ class PedestrianMapAligner(BaseAligner):
                             obj_ply.transform(transformation_matrix)
 
                             obj_points = np.asarray(obj_ply.points)
-                            scaled_box = bounding_box_o3d.scale(scale, bounding_box_o3d.get_center())
+                            scaled_box = bounding_box_o3d.scale(scaling_factor, bounding_box_o3d.get_center())
 
                             if obj_row['labels'] == 'Pedestrian' and obj_row['track_id'] == self.pedestrian_id:
                                 self.pedestrian_data[frame] = obj_points, scaled_box
                             elif obj_row['labels'] == 'Car':
                                 self.car_data.setdefault(frame, []).append(obj_points)          
+                    
+                        # Collect cropped point clouds for the scenario
+                        cropped_pcd = self._crop(frame)
+                        scenario_cropped_pcds.append((frame, self.pedestrian_id, cropped_pcd))
 
-                # Save the cropped point clouds if requested
-                if save:
-                    self.save(save_path=save_path)
+            # Save the scenario's cropped point clouds if requested
+            if save:
+                self.save(save_path=save_path, scenario_cropped_pcds=scenario_cropped_pcds)
+        
+        end_time = time.time()
+        total_save_time = end_time - start_time
+        self.logger.info(f"Total save time: {total_save_time:.2f} seconds")
 
 
-    def save(self, save_path: str):
-        """
-        Saves the cropped pedestrian point clouds.
-
-        Args:
-            save_path (str): Directory path where the cropped point clouds will be saved.
-
-        Notes:
-            - Creates directories if they do not exist.
-            - Saves point clouds for each processed frame in the specified directory.
-            - Each frame's point cloud is saved in a separate file named `<scenario_id>_<frame_id>_ped_<Ped_ID>.ply`.
-        """
-        # Ensure the save directory exists
+    def save(self, save_path: str, scenario_cropped_pcds: list):
         os.makedirs(save_path, exist_ok=True)
-
         scenario_id = self.scenario_name.split('_')[-1]
-        for frame in self.frames:
-            try:
-                
-                # Crop the point cloud for the pedestrian in the current frame
-                cropped_pcd = self._crop(frame)
 
-                # Ensure the cropped point cloud is a valid Open3D PointCloud object
+        for frame, pedestrian_id, cropped_pcd in scenario_cropped_pcds:
+            try:
+                file_name = f"{scenario_id}_{frame:04d}_Ped_{pedestrian_id}.ply"
+                file_path = os.path.join(save_path, file_name)
                 if isinstance(cropped_pcd, np.ndarray):
                     cropped_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(cropped_pcd))
                 elif not isinstance(cropped_pcd, o3d.geometry.PointCloud):
                     raise TypeError(f"Invalid point cloud type: {type(cropped_pcd)}")
-
-                # Save the cropped point cloud to a file
-                file_path = os.path.join(save_path, f"{scenario_id}_{frame}_ped_{self.pedestrian_id}.ply")
-                success = o3d.io.write_point_cloud(file_path, cropped_pcd, write_ascii=True)
-                if not success:
-                    raise RuntimeError(f"Failed to write point cloud to {file_path}")
-
+                self.save_manager.add_save_task(file_path, cropped_pcd)
             except Exception as e:
-                self.logger.error(f"Failed to process frame {frame}: {e}")
+                self.logger.error(f"Failed to save frame {frame} for pedestrian {pedestrian_id}: {e}")
 
- 
+        self.save_manager.wait_for_completion() 
+
     def _get_relevant_frames(self):
                 """
                 Retrieves relevant frame numbers from the LOKI CSV.
@@ -172,12 +169,9 @@ class PedestrianMapAligner(BaseAligner):
                 """
                 self.logger.info("Loading LOKI CSV data.")
                 loki_data = self.loki.load_loki_csv()
-
                 if loki_data.empty:
                     self.logger.warning(f"No data found in loki_data")
                     return []
-
-                # self.logger.info(f"Filtering data for Pedestrian ID: {self.pedestrian_id} in scenario: {self.scenario_name}.")
 
                 scenario_to_ped_to_frames = {}
                 # for testing, test the first 60 frames
@@ -185,18 +179,20 @@ class PedestrianMapAligner(BaseAligner):
                 # max_frames = 60
                 self.logger.info(f"Extracting all pedestrians with their respective frame(s).")
                 for _, row in loki_data.iterrows():
-                    frame_name = row['frame_name']
-                    scenario_name = row['video_name']
+                    frame_number = row['frame_id']
+                    scenario_id = row['scenario_id']
+                    scenario_id = f"{scenario_id:03d}"
+
                     # if not scenario_name == 'scenario_026':
                     #     continue
-                    ped_id = row['Ped_ID']
-                    try:
-                        frame_number = int(frame_name.split('_')[-1])  # Ensure we extract numeric frame numbers
-                    except ValueError:
-                        self.logger.error(f"Invalid frame name format: {frame_name}. Skipping.")
-                        continue
+                    ped_id = row['track_id']
+                    # try:
+                    #     frame_number = int(frame_name.split('_')[-1])  # Ensure we extract numeric frame numbers
+                    # except ValueError:
+                    #     self.logger.error(f"Invalid frame name format: {frame_name}. Skipping.")
+                    #     continue
 
-                    scenario_to_ped_to_frames.setdefault(scenario_name, {}).setdefault(ped_id, []).append(frame_number)   
+                    scenario_to_ped_to_frames.setdefault(f'scenario_{scenario_id}', {}).setdefault(ped_id, []).append(frame_number)   
 
                     # frame_count+=1
                     
