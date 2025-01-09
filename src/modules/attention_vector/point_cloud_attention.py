@@ -66,8 +66,5 @@ def main():
     save_attention_results(output, attention_weights, output_file)
 
 
-# %%
-
-
 if __name__ == "__main__":
     main()
