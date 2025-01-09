@@ -34,7 +34,7 @@ def save_attention_results(output: torch.Tensor, attention_weights: torch.Tensor
         logger.error(f"Failed to save attention results: {e}")
 
 
-def main():
+def run_sample():
     """
     Main function to test the PointCloudAttentionModel with random input data.
     """
@@ -67,4 +67,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_sample()
