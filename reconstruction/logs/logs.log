@@ -1,0 +1,42 @@
+2025-01-09 01:31:33,239 - INFO - __main__ - Running Odometry Aligner Test...
+2025-01-09 01:31:33,240 - INFO - modules.loki - Initialized LokiDataset for scenario: 000
+2025-01-09 01:31:33,241 - INFO - PointCloudOdometryAligner - Initialized PointCloudOdometryAligner
+2025-01-09 01:31:33,241 - INFO - PointCloudOdometryAligner - Starting Odometry Alignment Process
+2025-01-09 01:31:33,241 - INFO - PointCloudOdometryAligner - All input data valid
+2025-01-09 01:31:33,242 - INFO - PointCloudOdometryAligner - Key frame set to frame 20
+2025-01-09 01:31:33,242 - INFO - PointCloudOdometryAligner - Alignment Interval set to 10
+2025-01-09 01:31:33,243 - INFO - PointCloudOdometryAligner - Alignment Direction set to SPLIT
+2025-01-09 01:31:33,243 - INFO - PointCloudOdometryAligner - Aligning 10 frames in SPLIT direction
+2025-01-09 01:31:33,244 - INFO - PointCloudOdometryAligner - Starting Odometry Environment Alignment Process
+2025-01-09 01:31:33,244 - INFO - PointCloudOdometryAligner - Aligning frames from 10 to 30: [10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+2025-01-09 01:31:33,244 - INFO - PointCloudOdometryAligner - Processing frame 10
+2025-01-09 01:31:33,443 - DEBUG - PointCloudOdometryAligner - Removed 26 objects from pcd
+2025-01-09 01:31:33,445 - INFO - PointCloudOdometryAligner - Processing frame 12
+2025-01-09 01:31:33,704 - DEBUG - PointCloudOdometryAligner - Removed 26 objects from pcd
+2025-01-09 01:31:33,706 - INFO - PointCloudOdometryAligner - Processing frame 14
+2025-01-09 01:31:33,895 - DEBUG - PointCloudOdometryAligner - Removed 26 objects from pcd
+2025-01-09 01:31:33,897 - INFO - PointCloudOdometryAligner - Processing frame 16
+2025-01-09 01:31:34,098 - DEBUG - PointCloudOdometryAligner - Removed 27 objects from pcd
+2025-01-09 01:31:34,100 - INFO - PointCloudOdometryAligner - Processing frame 18
+2025-01-09 01:31:34,317 - DEBUG - PointCloudOdometryAligner - Removed 29 objects from pcd
+2025-01-09 01:31:34,319 - INFO - PointCloudOdometryAligner - Processing frame 20
+2025-01-09 01:31:34,529 - DEBUG - PointCloudOdometryAligner - Removed 29 objects from pcd
+2025-01-09 01:31:34,531 - INFO - PointCloudOdometryAligner - Processing frame 22
+2025-01-09 01:31:34,734 - DEBUG - PointCloudOdometryAligner - Removed 28 objects from pcd
+2025-01-09 01:31:34,735 - INFO - PointCloudOdometryAligner - Processing frame 24
+2025-01-09 01:31:34,943 - DEBUG - PointCloudOdometryAligner - Removed 28 objects from pcd
+2025-01-09 01:31:34,945 - INFO - PointCloudOdometryAligner - Processing frame 26
+2025-01-09 01:31:35,157 - DEBUG - PointCloudOdometryAligner - Removed 28 objects from pcd
+2025-01-09 01:31:35,159 - INFO - PointCloudOdometryAligner - Processing frame 28
+2025-01-09 01:31:35,362 - DEBUG - PointCloudOdometryAligner - Removed 26 objects from pcd
+2025-01-09 01:31:35,364 - INFO - PointCloudOdometryAligner - Processing frame 30
+2025-01-09 01:31:35,582 - DEBUG - PointCloudOdometryAligner - Removed 26 objects from pcd
+2025-01-09 01:31:35,583 - INFO - PointCloudOdometryAligner - Aligning 11 point clouds
+2025-01-09 01:31:35,649 - INFO - PointCloudOdometryAligner - Aligned environment point clouds using odometry successfully
+2025-01-09 01:31:35,653 - INFO - PointCloudOdometryAligner - Starting Last Objects Instances Alignment Process
+2025-01-09 01:31:35,654 - INFO - PointCloudOdometryAligner - Cropping objects from last frame: 30
+2025-01-09 01:31:35,654 - INFO - modules.loki - Loading all data for frame 30 in scenario_id: 000
+2025-01-09 01:31:35,677 - INFO - modules.loki - Successfully loaded all data for frame 30
+2025-01-09 01:31:35,705 - INFO - PointCloudOdometryAligner - Cropped objects from last point clouds successfully
+2025-01-09 01:31:35,810 - INFO - __main__ - Odometry Aligned Environment Point Cloud with 2479262 enviornment points
+2025-01-09 01:31:35,811 - INFO - __main__ - Odometry Aligned Objects Point Cloud with 5685 objects points

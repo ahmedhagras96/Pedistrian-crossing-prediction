@@ -41,9 +41,9 @@ class PedestrianMapAligner(BaseAligner):
         self.frames = None
         self.pedestrian_id = None
         self.scenario_name = None 
+        self.save_manager = ThreadedSaveManager()
         self.pedestrian_data = {}
         self.car_data = {}
-        self.save_manager = ThreadedSaveManager()
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initialized {self.__class__.__name__}")
 
@@ -78,13 +78,14 @@ class PedestrianMapAligner(BaseAligner):
         scenario_to_ped_to_frames = self._get_relevant_frames()
         total_save_time = 0
         start_time = time.time()
-
+        scenario_cropped_pcds = []
         for scenario_name, ID_to_FR in scenario_to_ped_to_frames.items():
 
             self.scenario_name = scenario_name
             scenario_path = os.path.join(self.loki_folder_path, scenario_name)
             self.map_pcd = o3d.io.read_point_cloud(os.path.join(scenario_path, 'map.ply'))
-            scenario_cropped_pcds = []
+            self.pedestrian_data = {}
+            self.car_data = {}
 
            
             for pedestrian_id, frame_sequence in ID_to_FR.items():  
@@ -95,10 +96,11 @@ class PedestrianMapAligner(BaseAligner):
 
                 for frame in self.frames:
                     pcd, odom, label3d = self.loki.load_alignment_data(frame, scenario_path)
-
+                    if label3d.empty:
+                        self.logger.warning(f"No labels found for frame {frame} in scenario {self.scenario_name}")
                     # Filter for relevant objects (car and pedestrian)
                     objects = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
-
+                    
                     target_pedestrian_exists = objects[objects['track_id'].isin([self.pedestrian_id])].shape[0] > 0
 
                     if target_pedestrian_exists:
@@ -106,6 +108,9 @@ class PedestrianMapAligner(BaseAligner):
 
                         # Iterate over each object in the frame
                         for _, obj_row in objects.iterrows():
+                            # Explicit column selection for better readability and robustness
+                            # columns = ["pos_x", "pos_y", "pos_z", "dim_x", "dim_y", "dim_z", "yaw"]
+                            # dimensions = [float(obj_row[col]) for col in columns]
                             dimensions = [float(obj_row[col]) for col in obj_row.index[3:10]]
                             center_box, yaw, (l, w, h) = dimensions[:3], dimensions[6], dimensions[3:6]
                             yaw_matrix = PointCloudUtils.get_yaw_matrix(yaw)
@@ -127,11 +132,11 @@ class PedestrianMapAligner(BaseAligner):
                     
                         # Collect cropped point clouds for the scenario
                         cropped_pcd = self._crop(frame)
-                        scenario_cropped_pcds.append((frame, self.pedestrian_id, cropped_pcd))
+                        scenario_cropped_pcds.append((self.scenario_name,frame, self.pedestrian_id, cropped_pcd))
 
-            # Save the scenario's cropped point clouds if requested
-            if save:
-                self.save(save_path=save_path, scenario_cropped_pcds=scenario_cropped_pcds)
+        # Save the scenario's cropped point clouds if requested
+        if save:
+            self.save(save_path=save_path, scenario_cropped_pcds=scenario_cropped_pcds)
         
         end_time = time.time()
         total_save_time = end_time - start_time
@@ -140,10 +145,11 @@ class PedestrianMapAligner(BaseAligner):
 
     def save(self, save_path: str, scenario_cropped_pcds: list):
         os.makedirs(save_path, exist_ok=True)
-        scenario_id = self.scenario_name.split('_')[-1]
 
-        for frame, pedestrian_id, cropped_pcd in scenario_cropped_pcds:
+
+        for scenario_name, frame, pedestrian_id, cropped_pcd in scenario_cropped_pcds:
             try:
+                scenario_id = scenario_name.split('_')[-1]
                 file_name = f"{scenario_id}_{frame:04d}_Ped_{pedestrian_id}.ply"
                 file_path = os.path.join(save_path, file_name)
                 if isinstance(cropped_pcd, np.ndarray):
@@ -183,14 +189,9 @@ class PedestrianMapAligner(BaseAligner):
                     scenario_id = row['scenario_id']
                     scenario_id = f"{scenario_id:03d}"
 
-                    # if not scenario_name == 'scenario_026':
-                    #     continue
+
                     ped_id = row['track_id']
-                    # try:
-                    #     frame_number = int(frame_name.split('_')[-1])  # Ensure we extract numeric frame numbers
-                    # except ValueError:
-                    #     self.logger.error(f"Invalid frame name format: {frame_name}. Skipping.")
-                    #     continue
+
 
                     scenario_to_ped_to_frames.setdefault(f'scenario_{scenario_id}', {}).setdefault(ped_id, []).append(frame_number)   
 

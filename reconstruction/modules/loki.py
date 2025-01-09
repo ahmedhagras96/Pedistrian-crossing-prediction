@@ -34,7 +34,8 @@ class LokiDataset:
         self.scenario_id = re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1) if scenario_path else None
         self.loki_csv_path = loki_csv_path
 
-        if scenario_path: LokiDataset.logger.info(f"Initialized {self.__class__.__name__} for scenario: {self.scenario_id}")
+        if self.scenario_path: LokiDataset.logger.info(f"Initialized {self.__class__.__name__} for scenario: {self.scenario_id}")
+        else: LokiDataset.logger.info(f"Initialized {self.__class__.__name__}")
 
     def load_ply(self, frame_index: int) -> Optional[o3d.geometry.PointCloud]:
         """
@@ -143,12 +144,14 @@ class LokiDataset:
             Optional[Dict[str, any]]: Dictionary containing 'point_cloud', 'odometry', and 'label3d' keys
             with their respective loaded data, or None if any loading fails.
         """
-        if self.scenario_path is None:
+
+        if scenario_path is not None:
             self.scenario_path = scenario_path
-
-            scenario_id = re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1)
-            LokiDataset.logger.info(f"Loading all data for frame {frame_index} in scenario_id: {scenario_id}")
-
+            self.scenario_id = re.search(r'scenario_(\d+)', os.path.basename(scenario_path), re.IGNORECASE).group(1)
+        elif self.scenario_path is None:
+                LokiDataset.logger.error("scenario_path is not set.")
+                return None
+        LokiDataset.logger.info(f"Loading all data for frame {frame_index} in scenario_id: {self.scenario_id}")
 
         pcd = self.load_ply(frame_index)
         odometry = self.load_odometry(frame_index)
