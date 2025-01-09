@@ -1,5 +1,8 @@
-﻿import yaml
-import os
+﻿import os
+
+import yaml
+
+from modules.config.paths_loader import PathsLoader
 
 
 class ConfigLoader:
@@ -51,7 +54,10 @@ class ConfigLoader:
             RuntimeError: If the configuration is not loaded.
         """
         if ConfigLoader._config is None:
-            raise RuntimeError("Configuration is not loaded. Call 'load_config' first.")
+            try:
+                ConfigLoader.load_config(PathsLoader.get_folder_path(PathsLoader.Paths.CONFIG_FILE))
+            except:
+                raise RuntimeError("Configuration is not loaded. Call 'load_config' first.")
 
         value = ConfigLoader._config
         for key in keys.split('.'):

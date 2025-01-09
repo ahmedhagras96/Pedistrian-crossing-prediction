@@ -1,8 +1,10 @@
 ﻿import json
+import os
 
 import torch
 
 from modules.attention_vector.point_cloud_attention.point_cloud_attention_model import PointCloudAttentionModel
+from modules.config.paths_loader import PathsLoader
 from modules.utilities.logger import LoggerUtils
 
 # Initialize logger
@@ -40,7 +42,7 @@ def main():
     batch_size = 3
     num_points = 600
     embed_dim = 8
-    output_file = "attention_results.json"
+    output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "point_cloud_attention.json")
 
     # Generate random point cloud data
     points = torch.rand(batch_size, num_points, 3)
@@ -62,7 +64,9 @@ def main():
 
     # Save the results to a file
     save_attention_results(output, attention_weights, output_file)
-#%%
+
+
+# %%
 
 
 if __name__ == "__main__":

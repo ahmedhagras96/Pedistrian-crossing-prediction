@@ -29,7 +29,7 @@ if __name__ == '__main__':
     
     # Loads the config file for global usage
     ConfigLoader.load_config(PathsLoader.get_folder_path(PathsLoader.Paths.CONFIG_FILE))
-
+    
     # Configures the logging system to log messages to a unified log file & retrieves a logger instance.
     LoggerUtils.configure_unified_file_logging(os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.LOGS), "logs.log"))
     logger = LoggerUtils.get_logger(__name__)
