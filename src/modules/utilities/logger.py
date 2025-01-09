@@ -1,6 +1,8 @@
 import logging
 import os
 
+from modules.config.config_loader import ConfigLoader
+
 
 class ColorFormatter(logging.Formatter):
     """
@@ -45,7 +47,7 @@ class LoggerUtils:
             file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
             file_handler.setFormatter(file_formatter)
             root_logger.addHandler(file_handler)
-            root_logger.setLevel(logging.DEBUG)
+            root_logger.setLevel(ConfigLoader.get_config_value("logging.level"))
             LoggerUtils._file_handler_configured = True
 
     @staticmethod
@@ -65,7 +67,7 @@ class LoggerUtils:
             color_formatter = ColorFormatter("%(asctime)s - %(levelname)s - %(name)s - %(message)s")
             console_handler.setFormatter(color_formatter)
             logger.addHandler(console_handler)
-            logger.setLevel(logging.DEBUG)
-            # logger.setLevel(logging.INFO)
+            logger.setLevel(ConfigLoader.get_config_value("logging.level"))
+
             logger.propagate = True
         return logger
