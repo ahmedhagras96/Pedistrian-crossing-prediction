@@ -1,6 +1,6 @@
 import sys
 import os
-from utilities.logger import LoggerUtils
+from modules.utilities.logger import LoggerUtils
 
 main_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
 log_file = os.path.normpath(os.path.abspath(os.path.join(main_path, "logs", "logs.log")))
