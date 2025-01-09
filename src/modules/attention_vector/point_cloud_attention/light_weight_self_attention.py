@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-from modules.attention_vector.point_cloud_attention.modules.base import LocalSelfAttentionBase
+from modules.attention_vector.point_cloud_attention.base import LocalSelfAttentionBase
 
 
 class LightweightSelfAttentionLayer(LocalSelfAttentionBase):

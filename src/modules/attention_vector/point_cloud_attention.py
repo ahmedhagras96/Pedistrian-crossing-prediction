@@ -1,7 +1,7 @@
 ﻿import torch
 import json
 
-from modules.attention_vector.point_cloud_attention.modules.point_cloud_attention_model import PointCloudAttentionModel
+from modules.attention_vector.point_cloud_attention.point_cloud_attention_model import PointCloudAttentionModel
 
 # Save Attention Results
 def save_attention_results(output, attention_weights, output_file):
@@ -31,8 +31,9 @@ def main():
     out, wei = model(points)
 
     print("Output shape:", out.shape)
+    print("Output shape:", wei.shape)
 
-    save_attention_results(out, wei, "LOKI/AttOut.json")
+    # save_attention_results(out, wei, "LOKI/AttOut.json")
 
 
 if __name__ == "__main__":
