@@ -66,5 +66,6 @@ class LoggerUtils:
             console_handler.setFormatter(color_formatter)
             logger.addHandler(console_handler)
             logger.setLevel(logging.DEBUG)
+            # logger.setLevel(logging.INFO)
             logger.propagate = True
         return logger

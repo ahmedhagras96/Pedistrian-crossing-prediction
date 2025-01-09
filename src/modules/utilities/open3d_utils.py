@@ -2,6 +2,7 @@ import open3d as o3d
 
 from modules.utilities.logger import LoggerUtils
 
+
 class Open3DUtils:
     """
     A utility class for working with Open3D PointCloud objects.
