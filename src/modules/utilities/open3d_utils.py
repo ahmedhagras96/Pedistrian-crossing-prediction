@@ -1,6 +1,6 @@
 import open3d as o3d
 
-from .logger import LoggerUtils
+from modules.utilities.logger import LoggerUtils
 
 class Open3DUtils:
     """
