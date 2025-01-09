@@ -46,7 +46,7 @@ def main():
 
     # Generate random point cloud data
     points = torch.rand(batch_size, num_points, 3)
-    logger.info(f"Generated random input point cloud of shape {points.shape}")
+    logger.debug(f"Generated random input point cloud of shape {points.shape}")
 
     # Initialize the model
     model = PointCloudAttentionModel(embed_dim=embed_dim)
