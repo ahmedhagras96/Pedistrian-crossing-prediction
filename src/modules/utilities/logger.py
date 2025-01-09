@@ -30,7 +30,7 @@ class LoggerUtils:
     _file_handler_configured = False
 
     @staticmethod
-    def configure_unified_file_logging(log_file: str):
+    def configure_unified_logging_file(log_file: str):
         """
         Configure a shared file handler for all loggers.
 
