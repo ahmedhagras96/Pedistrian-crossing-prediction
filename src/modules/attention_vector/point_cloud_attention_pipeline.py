@@ -16,7 +16,7 @@ def run_point_cloud_attention_pipeline():
     batch_size = 3
     num_points = 600
     embed_dim = 8
-    output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "point_cloud_attention.json")
+    output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "attention", "point_cloud_attention.json")
 
     # Initialize logger
     logger = LoggerUtils.get_logger(__name__)
