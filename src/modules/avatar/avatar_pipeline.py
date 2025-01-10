@@ -6,7 +6,7 @@ from modules.models.point_net_feature_extractor import PointNetFeatureExtractor
 from modules.utilities.point_cloud_utils import PointCloudUtils
 
 
-def run_pipeline():
+def run_avatar_pipeline():
     processor = PointCloudUtils()
     model = PointNetFeatureExtractor(input_dim=3, output_dim=64)
 
@@ -25,4 +25,4 @@ def run_pipeline():
 
 
 if __name__ == "__main__":
-    run_pipeline()
+    run_avatar_pipeline()

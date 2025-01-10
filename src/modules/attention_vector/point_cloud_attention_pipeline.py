@@ -7,34 +7,8 @@ from modules.attention_vector.point_cloud_attention.point_cloud_attention_model 
 from modules.config.paths_loader import PathsLoader
 from modules.utilities.logger import LoggerUtils
 
-# Initialize logger
-logger = LoggerUtils.get_logger(__name__)
 
-
-def save_attention_results(output: torch.Tensor, attention_weights: torch.Tensor, output_file: str):
-    """
-    Save the attention model's output and attention weights to a JSON file.
-
-    Args:
-        output (torch.Tensor): The output tensor from the attention model of shape [B, embed_dim].
-        attention_weights (torch.Tensor): The attention weights tensor of shape [B, M, num_heads].
-        output_file (str): File path to save the results as a JSON file.
-    """
-    logger.info(f"Saving attention results to {output_file}")
-
-    output_data = {
-        "weighted_output": output.detach().cpu().numpy().tolist(),
-        "attention_weights": attention_weights.detach().cpu().numpy().tolist(),
-    }
-    try:
-        with open(output_file, 'w') as f:
-            json.dump(output_data, f, indent=4)
-        logger.info(f"Attention results successfully saved to {output_file}")
-    except Exception as e:
-        logger.error(f"Failed to save attention results: {e}")
-
-
-def run_sample():
+def run_point_cloud_attention_pipeline():
     """
     Main function to test the PointCloudAttentionModel with random input data.
     """
@@ -43,6 +17,9 @@ def run_sample():
     num_points = 600
     embed_dim = 8
     output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "point_cloud_attention.json")
+
+    # Initialize logger
+    logger = LoggerUtils.get_logger(__name__)
 
     # Generate random point cloud data
     points = torch.rand(batch_size, num_points, 3)
@@ -63,8 +40,19 @@ def run_sample():
         return
 
     # Save the results to a file
-    save_attention_results(output, attention_weights, output_file)
+    logger.info(f"Saving attention results to {output_file}")
 
+    output_data = {
+        "weighted_output": output.detach().cpu().numpy().tolist(),
+        "attention_weights": attention_weights.detach().cpu().numpy().tolist(),
+    }
+    try:
+        with open(output_file, 'w') as f:
+            json.dump(output_data, f, indent=4)
+        logger.info(f"Attention results successfully saved to {output_file}")
+    except Exception as e:
+        logger.error(f"Failed to save attention results: {e}")
 
-if __name__ == "__main__":
-    run_sample()
+# 
+# if __name__ == "__main__":
+#     run_point_cloud_attention_pipeline()
