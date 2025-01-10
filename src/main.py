@@ -1,12 +1,11 @@
 import os
 import sys
 
+from modules.attention_vector.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
+from modules.avatar.avatar_pipeline import run_avatar_pipeline
 from modules.config.config_loader import ConfigLoader
 from modules.config.paths_loader import PathsLoader
 from modules.utilities.logger import LoggerUtils
-
-from modules.attention_vector.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
-from modules.avatar.avatar_pipeline import run_avatar_pipeline
 
 logger = None
 
@@ -14,12 +13,10 @@ logger = None
 def main():
     # !Note: If any logging messages are obstructing or getting in the way, look them up and change log level from info to debug
     configure_main()
-    
+
     run_point_cloud_attention_pipeline()
     run_avatar_pipeline()
-    
-    
-    
+
 
 def configure_main():
     # Sets the source path to ensure that the program can locate module files correctly using sys.path.
