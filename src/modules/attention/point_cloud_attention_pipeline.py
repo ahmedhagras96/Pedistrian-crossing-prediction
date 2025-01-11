@@ -1,10 +1,10 @@
-﻿import json
-import os
+﻿import os
 
 import torch
 
 from modules.attention.point_cloud_attention.point_cloud_attention_model import PointCloudAttentionModel
 from modules.config.paths_loader import PathsLoader
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 
 
@@ -16,7 +16,8 @@ def run_point_cloud_attention_pipeline():
     batch_size = 3
     num_points = 600
     embed_dim = 8
-    output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "attention", "point_cloud_attention.json")
+    output_file = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "attention",
+                               "point_cloud_attention.json")
 
     # Initialize logger
     logger = LoggerUtils.get_logger(__name__)
@@ -47,8 +48,7 @@ def run_point_cloud_attention_pipeline():
         "attention_weights": attention_weights.detach().cpu().numpy().tolist(),
     }
     try:
-        with open(output_file, 'w') as f:
-            json.dump(output_data, f, indent=4)
+        FileUtils.save_json(output_data, output_file)
         logger.info(f"Attention results successfully saved to {output_file}")
     except Exception as e:
         logger.error(f"Failed to save attention results: {e}")

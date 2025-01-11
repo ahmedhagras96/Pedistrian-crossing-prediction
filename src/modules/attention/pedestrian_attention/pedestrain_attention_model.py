@@ -1,7 +1,6 @@
-﻿import json
-
-from modules.attention.heads.multi_head_attention import MultiHeadAttention
+﻿from modules.attention.heads.multi_head_attention import MultiHeadAttention
 from modules.features.processors.feature_loader import FeatureLoader
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 
 
@@ -40,8 +39,7 @@ class PedestrianAttentionModel:
                 "attention_weights": attention_weights.detach().cpu().numpy().tolist()
             }
 
-            with open(output_file, "w") as f:
-                json.dump(output_data, f, indent=4)
+            FileUtils.save_json(output_data, output_file)
 
             self.logger.info(f"Attention results saved to {output_file}")
         except Exception as e:

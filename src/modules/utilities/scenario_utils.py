@@ -1,7 +1,7 @@
-﻿import json
-import os
+﻿import os
 
 from modules.base_module import BaseModule
+from modules.utilities.file_utils import FileUtils
 
 
 class ScenarioUtils(BaseModule):
@@ -58,8 +58,7 @@ class ScenarioUtils(BaseModule):
         for scenario_id, frames_data in grouped_features.items():
             output_file = os.path.join(output_dir, f"scenario_{scenario_id}.json")
             try:
-                with open(output_file, 'w') as json_file:
-                    json.dump(frames_data, json_file, indent=4)
+                FileUtils.save_json(frames_data, output_file)
                 self.logger.info(f"Scenario {scenario_id} features saved to {output_file}")
             except Exception as e:
                 self.logger.error(f"Error saving scenario {scenario_id} to {output_file}: {e}")

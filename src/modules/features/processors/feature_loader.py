@@ -1,9 +1,8 @@
-﻿import json
-
-import numpy as np
+﻿import numpy as np
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 
 
@@ -28,8 +27,7 @@ class FeatureLoader:
         """
         try:
             self.logger.info(f"Loading features from {json_file}")
-            with open(json_file, "r") as f:
-                data = json.load(f)
+            data = FileUtils.load_json(json_file)
 
             features = []
             all_speeds = []

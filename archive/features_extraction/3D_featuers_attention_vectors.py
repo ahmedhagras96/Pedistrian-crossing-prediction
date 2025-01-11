@@ -1,15 +1,15 @@
-import os
 import json
+import os
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
+import torch
 from sklearn.preprocessing import MinMaxScaler
 
 from Multi_head_attention_layer import MultiHeadAttention
+from modules.utilities.file_utils import FileUtils
 
-#merge all extracted 3D featuers (speed, distance, movmentstatus, Group status and walking direction)
+
+# merge all extracted 3D featuers (speed, distance, movmentstatus, Group status and walking direction)
 def merge_features(group_walking_file, speed_distance_file, output_file):
     """
     Merge two JSON files for a scenario based on pedestrian IDs.
@@ -49,10 +49,10 @@ def merge_features(group_walking_file, speed_distance_file, output_file):
                 merged_data[frame_id] = merged_frame
 
     # Save merged data to a new JSON file
-    with open(output_file, "w") as out_file:
-        json.dump(merged_data, out_file, indent=4)
+    FileUtils.save_json(output_file, merged_data)
 
     print(f"Merged features saved to {output_file}")
+
 
 def merging_all_scenarios_featuers(group_walking_dir, speed_distance_dir, output_dir):
     """
@@ -85,6 +85,7 @@ output_dir = "./processed_scenarios/output_featuers_merged_jsons"
 # Run the merging process
 merging_all_scenarios_featuers(group_walking_dir, speed_distance_dir, output_dir)
 
+
 # Save Attention Results
 def save_attention_results(output, attention_weights, output_file):
     """
@@ -94,8 +95,8 @@ def save_attention_results(output, attention_weights, output_file):
         "weighted_output": output.detach().cpu().numpy().tolist(),
         "attention_weights": attention_weights.detach().cpu().numpy().tolist()
     }
-    with open(output_file, 'w') as f:
-        json.dump(output_data, f, indent=4)
+    FileUtils.save_json(output_file, output_data)
+
 
 # Load and Preprocess Features from JSON
 def load_features_from_json(json_file):
@@ -136,6 +137,7 @@ def load_features_from_json(json_file):
     # Convert to tensor and add batch dimension
     features_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0)
     return features_tensor
+
 
 # Apply Attention to Each Scenario
 def extrat_3D_featuers_attentions(input_folder, output_folder, input_dim, num_heads):

@@ -1,7 +1,8 @@
-﻿import json
-import math
+﻿import math
 import os
 
+from archive.reconstruction.modules.utils.file_utils import FileUtils
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 from modules.utilities.pedestrian_data_utils import PedestrianDataUtils
 
@@ -217,6 +218,5 @@ class PedestrianMovementFeatures:
             output_directory (str): Directory to save the JSON file.
         """
         output_path = os.path.join(output_directory, f"{scenario}_features.json")
-        with open(output_path, "w") as json_file:
-            json.dump(scenario_features, json_file, indent=4)
+        FileUtils.save_json(scenario_features, output_path)
         self.logger.info(f"Features for scenario {scenario} saved to: {output_path}")

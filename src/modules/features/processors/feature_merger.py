@@ -1,6 +1,6 @@
-﻿import json
-import os
+﻿import os
 
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 
 
@@ -26,11 +26,8 @@ class FeatureMerger:
             self.logger.info(f"Merging features: {group_walking_file}, {speed_distance_file}")
 
             # Load JSON files
-            with open(group_walking_file, "r") as gw_file:
-                group_walking_data = json.load(gw_file)
-
-            with open(speed_distance_file, "r") as sd_file:
-                speed_distance_data = json.load(sd_file)
+            group_walking_data = FileUtils.load_json(group_walking_file)
+            speed_distance_data = FileUtils.load_json(speed_distance_file)
 
             # Initialize merged data
             merged_data = {}
@@ -60,8 +57,7 @@ class FeatureMerger:
                         merged_data[frame_id] = merged_frame
 
             # Save merged data
-            with open(output_file, "w") as out_file:
-                json.dump(merged_data, out_file, indent=4)
+            FileUtils.save_json(merged_data, output_file)
 
             self.logger.info(f"Merged features saved to {output_file}")
 

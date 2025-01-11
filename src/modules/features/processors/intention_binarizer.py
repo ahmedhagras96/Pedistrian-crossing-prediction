@@ -1,5 +1,6 @@
 ﻿import pandas as pd
-import os
+
+from modules.utilities.file_utils import FileUtils
 from modules.utilities.logger import LoggerUtils
 
 
@@ -24,7 +25,7 @@ class IntentionBinarizer:
         """
         try:
             self.logger.info(f"Loading dataset from {file_path}")
-            df = pd.read_csv(file_path)
+            df = FileUtils.read_csv(file_path)
             self.logger.info(f"Dataset loaded with {len(df)} rows")
 
             self.logger.info("Binarizing 'Intention' column")
