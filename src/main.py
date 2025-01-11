@@ -1,7 +1,9 @@
 import os
 import sys
 
-from modules.attention_vector.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
+from modules.features.features_pipeline import run_intention_binarizer_pipeline, run_pedestrian_movement_features_pipeline
+from modules.attention.pedestrian_attention_pipeline import run_pedestrian_attention_pipeline
+from modules.attention.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
 from modules.avatar.avatar_pipeline import run_avatar_pipeline
 from modules.config.config_loader import ConfigLoader
 from modules.config.paths_loader import PathsLoader
@@ -14,6 +16,9 @@ def main():
     # !Note: If any logging messages are obstructing or getting in the way, look them up and change log level from info to debug
     configure_main()
 
+    run_intention_binarizer_pipeline()
+    run_pedestrian_movement_features_pipeline()
+    run_pedestrian_attention_pipeline()
     run_point_cloud_attention_pipeline()
     run_avatar_pipeline()
 
@@ -37,7 +42,7 @@ def configure_main():
     # Configures the logging system to log messages to a unified log file & retrieves a logger instance.
     LoggerUtils.configure_unified_logging_file(
         os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.LOGS), "logs.log"))
-    logger = LoggerUtils.get_logger(__name__)
+    # logger = LoggerUtils.get_logger(__name__)
 
 
 if __name__ == '__main__':

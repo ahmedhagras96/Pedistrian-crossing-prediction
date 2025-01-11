@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.attention_vector.point_cloud_attention.local_self_attention import LocalSelfAttention
+from modules.attention.point_cloud_attention.local_self_attention import LocalSelfAttention
 
 
 class LightweightSelfAttentionLayer(LocalSelfAttention):
@@ -21,7 +21,7 @@ class LightweightSelfAttentionLayer(LocalSelfAttention):
         in_channels (int): Number of input feature channels.
         out_channels (int): Number of output feature channels.
         num_heads (int): Number of attention heads.
-        attn_channels (int): Number of attention channels per head.
+        attn_channels (int): Number of attention channels per heads.
         to_query (nn.Linear): Linear projection for query computation.
         to_value (nn.Linear): Linear projection for value computation.
         to_out (nn.Linear): Linear projection for output computation.

@@ -13,6 +13,7 @@ class PathsLoader:
 
     @dataclass(frozen=True)
     class Paths:
+        LOKI: str = "data"
         RAW_DATA: str = "data/raw"
         PROCESSED_DATA: str = "data/processed"
         OUTPUT: str = "data/output"
@@ -25,8 +26,9 @@ class PathsLoader:
             os.path.dirname(
                 os.path.dirname(os.path.abspath(__file__))))
     )
-    
+
     PATHS_MAP = {
+        Paths.LOKI: Paths.LOKI,
         Paths.OUTPUT: Paths.OUTPUT,
         Paths.RAW_DATA: Paths.RAW_DATA,
         Paths.PROCESSED_DATA: Paths.PROCESSED_DATA,

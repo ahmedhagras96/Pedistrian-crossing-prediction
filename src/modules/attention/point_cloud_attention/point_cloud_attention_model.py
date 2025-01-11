@@ -1,7 +1,7 @@
 ﻿import torch.nn as nn
 
-from modules.attention_vector.point_cloud_attention.centroid_aware_voxelization import CentroidAwareVoxelization
-from modules.attention_vector.point_cloud_attention.lightweight_self_attention import LightweightSelfAttentionLayer
+from modules.attention.point_cloud_attention.centroid_aware_voxelization import CentroidAwareVoxelization
+from modules.attention.point_cloud_attention.lightweight_self_attention import LightweightSelfAttentionLayer
 
 
 class PointCloudAttentionModel(nn.Module):

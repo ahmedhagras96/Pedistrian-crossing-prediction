@@ -3,7 +3,7 @@ import os
 
 import torch
 
-from modules.attention_vector.point_cloud_attention.point_cloud_attention_model import PointCloudAttentionModel
+from modules.attention.point_cloud_attention.point_cloud_attention_model import PointCloudAttentionModel
 from modules.config.paths_loader import PathsLoader
 from modules.utilities.logger import LoggerUtils
 

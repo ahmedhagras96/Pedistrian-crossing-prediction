@@ -27,7 +27,7 @@ class BaseFusionHead(nn.Module, ABC):
             inputs: Variable number of inputs for fusion.
         
         Returns:
-            torch.Tensor: Output of the fusion head.
+            torch.Tensor: Output of the fusion heads.
         """
         pass
 

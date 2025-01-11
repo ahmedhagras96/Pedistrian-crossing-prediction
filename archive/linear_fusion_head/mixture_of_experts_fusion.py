@@ -5,7 +5,7 @@ from base_fusion_head import BaseFusionHead
 class MoEFusionHead(BaseFusionHead):
     def __init__(self, feature_dim, output_dim=1):
         """
-        Mixture of Experts (MoE) fusion head.
+        Mixture of Experts (MoE) fusion heads.
 
         Args:
             feature_dim (int): Dimensionality of input features.
@@ -28,7 +28,7 @@ class MoEFusionHead(BaseFusionHead):
             inputs: List of input tensors to process through experts.
 
         Returns:
-            torch.Tensor: Output of the fusion head.
+            torch.Tensor: Output of the fusion heads.
         """
         # Experts
         expert_1_out = self.expert_1(self.flatten(inputs[0]))

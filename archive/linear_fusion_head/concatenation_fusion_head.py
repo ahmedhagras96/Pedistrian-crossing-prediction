@@ -5,7 +5,7 @@ from Base_fusion_head import BaseFusionHead
 class ConcatenationFusionHead(BaseFusionHead):
     def __init__(self, feature_dim, output_dim=1):
         """
-        Concatenation-based fusion head.
+        Concatenation-based fusion heads.
 
         Args:
             feature_dim (int): Dimensionality of input features.
@@ -26,7 +26,7 @@ class ConcatenationFusionHead(BaseFusionHead):
             inputs: List of input tensors to concatenate.
 
         Returns:
-            torch.Tensor: Output of the fusion head.
+            torch.Tensor: Output of the fusion heads.
         """
         # Flatten and concatenate inputs
         concatenated = torch.cat([self.flatten(x) for x in inputs], dim=1)

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from modules.attention_vector.point_cloud_attention.kernel import KernelGenerator
+from modules.attention.point_cloud_attention.kernel import KernelGenerator
 
 
 class LocalSelfAttention(nn.Module):
