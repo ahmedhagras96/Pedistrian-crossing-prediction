@@ -2,7 +2,7 @@
 
 from modules.config.paths_loader import PathsLoader
 from modules.features.extractors.pedestrian_movement_features import PedestrianMovementFeatures
-from modules.features.features_processors.intention_binarizer import IntentionBinarizer
+from modules.features.processors.intention_binarizer import IntentionBinarizer
 from modules.utilities.logger import LoggerUtils
 
 

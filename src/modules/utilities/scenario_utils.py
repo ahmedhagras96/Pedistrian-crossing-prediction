@@ -1,10 +1,10 @@
 ﻿import json
 import os
 
-from modules.utilities.base_utility import BaseUtility
+from modules.base_module import BaseModule
 
 
-class ScenarioUtils(BaseUtility):
+class ScenarioUtils(BaseModule):
     """
     A utility class for grouping extracted features by scenario and saving them as JSON files.
 

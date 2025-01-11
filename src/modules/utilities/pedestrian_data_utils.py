@@ -1,9 +1,9 @@
 ﻿import math
 
-from modules.utilities.base_utility import BaseUtility
+from modules.base_module import BaseModule
 
 
-class PedestrianDataUtils(BaseUtility):
+class PedestrianDataUtils(BaseModule):
     """
     A utility class for parsing odometry and label data and calculating pedestrian metrics.
     """

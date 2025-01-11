@@ -1,7 +1,7 @@
 ﻿import json
 
 from modules.attention.heads.multi_head_attention import MultiHeadAttention
-from modules.features.features_processors.feature_loader import FeatureLoader
+from modules.features.processors.feature_loader import FeatureLoader
 from modules.utilities.logger import LoggerUtils
 
 

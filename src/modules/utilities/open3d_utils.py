@@ -1,9 +1,9 @@
 import open3d as o3d
 
-from modules.utilities.base_utility import BaseUtility
+from modules.base_module import BaseModule
 
 
-class Open3DUtils(BaseUtility):
+class Open3DUtils(BaseModule):
     """
     A utility class for working with Open3D PointCloud objects.
     """

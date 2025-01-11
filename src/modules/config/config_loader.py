@@ -2,8 +2,6 @@
 
 import yaml
 
-from modules.config.paths_loader import PathsLoader
-
 
 class ConfigLoader:
     """
@@ -29,6 +27,9 @@ class ConfigLoader:
             FileNotFoundError: If the file does not exist.
             yaml.YAMLError: If there is an error parsing the YAML file.
         """
+        if ConfigLoader._config is not None:
+            return
+        
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Configuration file not found at: {file_path}")
 
@@ -54,10 +55,7 @@ class ConfigLoader:
             RuntimeError: If the configuration is not loaded.
         """
         if ConfigLoader._config is None:
-            try:
-                ConfigLoader.load_config(PathsLoader.get_folder_path(PathsLoader.Paths.CONFIG_FILE))
-            except:
-                raise RuntimeError("Configuration is not loaded. Call 'load_config' first.")
+            raise RuntimeError("Configuration is not loaded. Call 'load_config' first.")
 
         value = ConfigLoader._config
         for key in keys.split('.'):

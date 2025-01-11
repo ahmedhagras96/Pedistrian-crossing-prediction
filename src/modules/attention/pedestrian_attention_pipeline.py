@@ -2,7 +2,7 @@
 
 from modules.attention.pedestrian_attention.pedestrain_attention_model import PedestrianAttentionModel
 from modules.config.paths_loader import PathsLoader
-from modules.features.features_processors.feature_merger import FeatureMerger
+from modules.features.processors.feature_merger import FeatureMerger
 from modules.utilities.logger import LoggerUtils
 
 

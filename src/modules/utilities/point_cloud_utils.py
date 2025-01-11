@@ -2,10 +2,10 @@
 import open3d as o3d
 from sklearn.preprocessing import MinMaxScaler
 
-from modules.utilities.base_utility import BaseUtility
+from modules.base_module import BaseModule
 
 
-class PointCloudUtils(BaseUtility):
+class PointCloudUtils(BaseModule):
     """
     A utility class for loading, normalizing, and preprocessing point cloud data.
     """

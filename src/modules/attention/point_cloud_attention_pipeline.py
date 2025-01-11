@@ -53,6 +53,6 @@ def run_point_cloud_attention_pipeline():
     except Exception as e:
         logger.error(f"Failed to save attention results: {e}")
 
-# 
-# if __name__ == "__main__":
-#     run_point_cloud_attention_pipeline()
+
+if __name__ == "__main__":
+    run_point_cloud_attention_pipeline()
