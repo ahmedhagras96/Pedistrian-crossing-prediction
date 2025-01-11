@@ -1,17 +1,15 @@
 ﻿import math
-from modules.utilities.logger import LoggerUtils
+
+from modules.utilities.base_utility import BaseUtility
 
 
-class PedestrianDataUtils:
+class PedestrianDataUtils(BaseUtility):
     """
     A utility class for parsing odometry and label data and calculating pedestrian metrics.
     """
 
     def __init__(self):
-        """
-        Initialize the PedestrianDataUtils class with logging.
-        """
-        self.logger = LoggerUtils.get_logger(self.__class__.__name__)
+        super().__init__()
 
     def parse_odometry(self, file_path):
         """
@@ -87,7 +85,7 @@ class PedestrianDataUtils:
             ped_x2, ped_y2 = frame2_coords
 
             # Distance from pedestrian to ego vehicle
-            pedestrian_distance = math.sqrt(ped_x2**2 + ped_y2**2)
+            pedestrian_distance = math.sqrt(ped_x2 ** 2 + ped_y2 ** 2)
 
             # Compute relative position in frame 2
             relative_x2 = ped_x2 - ego_x2
@@ -98,7 +96,7 @@ class PedestrianDataUtils:
             adjusted_y2 = relative_y2 + ego_y1 + (ego_y2 - ego_y1)
 
             # Compute distance between frames
-            distance_between_frames = math.sqrt((adjusted_x2 - ped_x1)**2 + (adjusted_y2 - ped_y1)**2)
+            distance_between_frames = math.sqrt((adjusted_x2 - ped_x1) ** 2 + (adjusted_y2 - ped_y1) ** 2)
 
             # Calculate speed
             time_interval = 1 / fps

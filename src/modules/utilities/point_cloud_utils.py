@@ -2,19 +2,16 @@
 import open3d as o3d
 from sklearn.preprocessing import MinMaxScaler
 
-from modules.utilities.logger import LoggerUtils
+from modules.utilities.base_utility import BaseUtility
 
 
-class PointCloudUtils:
+class PointCloudUtils(BaseUtility):
     """
     A utility class for loading, normalizing, and preprocessing point cloud data.
     """
 
     def __init__(self):
-        """
-        Initialize the PointCloudProcessor and set up logging.
-        """
-        self.logger = LoggerUtils.get_logger(self.__class__.__name__)
+        super().__init__()
 
     def load_ply_ndarray(self, file_path: str) -> np.ndarray:
         """

@@ -1,10 +1,10 @@
 ﻿import json
 import os
 
-from modules.utilities.logger import LoggerUtils
+from modules.utilities.base_utility import BaseUtility
 
 
-class ScenarioManager:
+class ScenarioUtils(BaseUtility):
     """
     A utility class for grouping extracted features by scenario and saving them as JSON files.
 
@@ -17,10 +17,7 @@ class ScenarioManager:
     """
 
     def __init__(self):
-        """
-        Initialize the ScenarioManager and set up logging.
-        """
-        self.logger = LoggerUtils.get_logger(self.__class__.__name__)
+        super().__init__()
 
     def group_by_scenario(self, features):
         """

@@ -1,15 +1,15 @@
 import open3d as o3d
 
-from modules.utilities.logger import LoggerUtils
+from modules.utilities.base_utility import BaseUtility
 
 
-class Open3DUtils:
+class Open3DUtils(BaseUtility):
     """
     A utility class for working with Open3D PointCloud objects.
     """
 
     def __init__(self):
-        self.logger = LoggerUtils.get_logger(self.__class__.__name__)
+        super().__init__()
 
     def convert_from_vertex_to_open3d_pcd(self, vertex_data):
         """

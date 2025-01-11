@@ -3,7 +3,7 @@
 from modules.avatar.pipeline.avatar_feature_extractor import AvatarFeatureExtractorPipeline
 from modules.datasets.pedestrian_point_cloud_dataset import PedestrianPointCloudDataset
 from modules.utilities.logger import LoggerUtils
-from modules.utilities.scenario_manager import ScenarioManager
+from modules.utilities.scenario_utils import ScenarioUtils
 
 
 class PointCloudPipeline:
@@ -39,7 +39,7 @@ class PointCloudPipeline:
             self.dataset, batch_size=batch_size, shuffle=False, collate_fn=self.dataset.collate_fn
         )
         self.feature_extractor = AvatarFeatureExtractorPipeline(model, batch_size)
-        self.scenario_manager = ScenarioManager()
+        self.scenario_manager = ScenarioUtils()
 
         self.logger.info("PointCloudPipeline initialized")
 
