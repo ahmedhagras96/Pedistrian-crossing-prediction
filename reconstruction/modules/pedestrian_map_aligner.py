@@ -150,7 +150,7 @@ class PedestrianMapAligner(BaseAligner):
         for scenario_name, frame, pedestrian_id, cropped_pcd in scenario_cropped_pcds:
             try:
                 scenario_id = scenario_name.split('_')[-1]
-                file_name = f"{scenario_id}_{frame:04d}_Ped_{pedestrian_id}.ply"
+                file_name = f"{scenario_id}_{frame:04d}_ped_{pedestrian_id}.ply"
                 file_path = os.path.join(save_path, file_name)
                 if isinstance(cropped_pcd, np.ndarray):
                     cropped_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(cropped_pcd))

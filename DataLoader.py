@@ -31,32 +31,38 @@ class PedestrianPointCloudDataset(Dataset):
         """
         Initialize dataset with pedestrian data, environment data, features, and labels.
         """
-        self.labels = pd.read_csv(label_csv).set_index('track_id')['intended_actions'].to_dict()
-        self.movement_status_mapping = {"Moving": 1, "Stationary": 0}
+        self.filtered_df = pd.read_csv(label_csv)
+        self.scenario_ids = self.filtered_df['scenario_id']
+        self.frame_ids = self.filtered_df['frame_id']
+        self.labels = {f"{scenario_id:03}_{frame_id:04}_ped_{p_id}": status 
+            for scenario_id, frame_id, p_id, status in
+            zip(self.scenario_ids, self.frame_ids, self.filtered_df['track_id'], self.filtered_df['intended_actions'])
+            }
 
         # Store paths to files
         self.pedestrian_files = {
-            f.split("_ped_")[-1].split(".")[0]: Path(pedestrian_dir) / f
+            f.split(".")[0]: Path(pedestrian_dir) / f
             for f in os.listdir(pedestrian_dir) if f.endswith(".ply")
         }
         self.environment_files = {
-            f.split("_Ped_")[-1].split(".")[0]: Path(environment_dir) / f
+            f.split(".")[0]: Path(environment_dir) / f
             for f in os.listdir(environment_dir) if f.endswith(".ply")
         }
         self.feature_files = {
-            f.split("_ped_")[-1].split(".")[0]: Path(feature_dir) / f
+            f.split(".")[0]: Path(feature_dir) / f
             for f in os.listdir(feature_dir) if f.endswith(".json")
         }
-
         self.pedestrian_ids = list(self.labels.keys())
+
+        # Check that all files exist
         pedestrian_ids_in_files = list(self.pedestrian_files.keys())
-        for pid in self.pedestrian_ids:
-            if pid not in pedestrian_ids_in_files:
-                raise ValueError(f"Missing pedestrian point cloud file for pedestrian ID: {pid}")
-            if pid not in self.environment_files:
-                raise ValueError(f"Missing environment point cloud file for pedestrian ID: {pid}")
-            if pid not in self.feature_files:
-                raise ValueError(f"Missing feature file for pedestrian ID: {pid}")
+        for p_id in self.pedestrian_ids:
+            if p_id not in pedestrian_ids_in_files:
+                raise ValueError(f"Missing pedestrian point cloud file for pedestrian ID: {p_id}")
+            if p_id not in self.environment_files:
+                raise ValueError(f"Missing environment point cloud file for pedestrian ID: {p_id}")
+            if p_id not in self.feature_files:
+                raise ValueError(f"Missing feature file for pedestrian ID: {p_id}")
 
     def __len__(self):
         return len(self.pedestrian_ids)
@@ -70,22 +76,20 @@ class PedestrianPointCloudDataset(Dataset):
             features = json.load(f)
 
         label = self.labels[pedestrian_id]
-        numeric_features = [
+        pedestrian_features = torch.tensor([
             features["frame_id"],
             features["group_status"],
             features["walking_toward_vehicle"],
-            features["speed"],
-            features["distance"]
-        ]
-        numeric_features_tensor = torch.tensor(numeric_features, dtype=torch.float32)
-        movement_status_encoded = self.movement_status_mapping.get(features["movement_status"], -1)
-        all_features = torch.cat([numeric_features_tensor, torch.tensor([movement_status_encoded], dtype=torch.float32)])
+            # features["movement_status"],
+            # features["speed"],
+            # features["distance"]
+        ])
 
         return (
             pedestrian_id,
             pedestrian_points,
             environment_points,
-            all_features,
+            pedestrian_features,
             label
         )
 
