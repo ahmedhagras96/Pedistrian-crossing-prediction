@@ -58,7 +58,7 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
             else:
                 # Initialize for the first frame
                 speed, distance = 0, math.sqrt(ped_x**2 + ped_y**2)
-                movement_status = "Unknown"
+                movement_status = -1  #Unknown
 
                 # Add this pedestrian to pending corrections
                 pending_corrections[ped_id] = frame_id
