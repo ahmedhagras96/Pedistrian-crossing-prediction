@@ -38,9 +38,6 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
         for ped_id, ped_data in pedestrians.items():
             ped_x, ped_y = ped_data["x"], ped_data["y"]
 
-            # Ignore pedestrians behind the ego vehicle
-            if ped_x < 0:
-                continue
 
             if ped_id in previous_positions:
                 # Calculate speed, distance, and movement status
