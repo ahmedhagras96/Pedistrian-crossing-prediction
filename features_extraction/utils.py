@@ -64,6 +64,6 @@ def calculate_speed_distance_movement(ped_coords_frame1, ped_coords_frame2,ego_o
     speed = distance / time_interval
 
     # Movement status
-    movement_status = "Stopped" if speed < 0.25 else "Moving"
+    movement_status = 0 if speed < 0.25 else 1
     
     return speed,ped_distance,movement_status
