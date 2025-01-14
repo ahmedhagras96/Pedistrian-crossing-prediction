@@ -108,6 +108,69 @@ class PedestrianMovementFeatures:
         label_files = [f for f in frame_files if f.startswith("label3d")]
         return odometry_files, label_files
 
+    def get_speed_dist_ms_for_scenario(self, scenario_path, fps):
+        """
+        Process a single scenario to extract speed, distance, and movement status for each pedestrian.
+    
+        Args:
+            scenario_path (str): Path to the scenario directory.
+            fps (int): Frames per second for calculations.
+    
+        Returns:
+            dict: Scenario features keyed by frame ID.
+        """
+        self.logger.info(f"Processing scenario at {scenario_path} with FPS={fps}")
+        frame_files = sorted(os.listdir(scenario_path))
+        odom_files = [f for f in frame_files if f.startswith("odom")]
+        label_files = [f for f in frame_files if f.startswith("label3d")]
+
+        previous_positions = {}
+        pending_corrections = {}
+        prev_ego_position = None
+        scenario_features = {}
+
+        for odom_file, label_file in zip(odom_files, label_files):
+            frame_id = int(odom_file.split("_")[1].split(".")[0].split()[0])
+            odom_path = os.path.join(scenario_path, odom_file)
+            label_path = os.path.join(scenario_path, label_file)
+
+            ego_position = self.utils.parse_odometry(odom_path)
+            pedestrians = self.utils.parse_pedestrian_labels(label_path)
+
+            frame_features = {}
+            for ped_id, ped_data in pedestrians.items():
+                ped_x, ped_y = ped_data["x"], ped_data["y"]
+
+                if ped_x < 0:
+                    continue
+
+                if ped_id in previous_positions:
+                    prev_position = previous_positions[ped_id]
+                    speed, distance, movement_status = self.utils.calculate_pedestrian_metrics(
+                        prev_position, (ped_x, ped_y), prev_ego_position, ego_position, fps
+                    )
+                    if ped_id in pending_corrections:
+                        pending_frame_id = pending_corrections[ped_id]
+                        if pending_frame_id in scenario_features and ped_id in scenario_features[pending_frame_id]:
+                            del scenario_features[pending_frame_id][ped_id]
+                        del pending_corrections[ped_id]
+                else:
+                    speed, distance = 0, (ped_x ** 2 + ped_y ** 2) ** 0.5
+                    movement_status = "Unknown"
+                    pending_corrections[ped_id] = frame_id
+
+                previous_positions[ped_id] = (ped_x, ped_y)
+                frame_features[ped_id] = {
+                    "speed": speed,
+                    "distance": distance,
+                    "movement_status": movement_status
+                }
+
+            scenario_features[frame_id] = frame_features
+            prev_ego_position = ego_position
+
+        return scenario_features
+
     def _parse_frame_data(self, scenario_directory, odometry_file, label_file):
         """
         Parse data for a single frame, including odometry and pedestrian labels.

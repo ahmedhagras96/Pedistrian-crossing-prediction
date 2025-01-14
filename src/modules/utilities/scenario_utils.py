@@ -62,3 +62,46 @@ class ScenarioUtils(BaseModule):
                 self.logger.info(f"Scenario {scenario_id} features saved to {output_file}")
             except Exception as e:
                 self.logger.error(f"Error saving scenario {scenario_id} to {output_file}: {e}")
+
+    def save_features_per_pedestrian(self, scenario_id, group_status, walking_status, scenario_features, output_folder,
+                                     pid_avatars_dir):
+        """
+        Save features per pedestrian to JSON files.
+    
+        Args:
+            scenario_id (str): ID of the scenario.
+            group_status (dict): Group status per frame.
+            walking_status (dict): Walking toward vehicle status per frame.
+            scenario_features (dict): Extracted speed/distance/movement features.
+            output_folder (str): Directory to save JSON files.
+            pid_avatars_dir (str): Directory containing pedestrian avatar .ply files.
+        """
+        self.logger.info(f"Saving features per pedestrian for scenario {scenario_id}")
+        avatar_ply_files = [f for f in os.listdir(pid_avatars_dir) if f.endswith('.ply')]
+        filtered_peds = [os.path.splitext(f)[0] for f in avatar_ply_files]
+        self.logger.debug(f"Filtered pedestrians: {filtered_peds}")
+
+        for frame_id in group_status.keys():
+            for ped_id, group_value in group_status[frame_id].items():
+                walking_value = walking_status.get(frame_id, {}).get(ped_id, 0)
+
+                pedestrian_features = {
+                    "frame_id": frame_id,
+                    "group_status": group_value,
+                    "walking_toward_vehicle": walking_value
+                }
+
+                if frame_id in scenario_features and ped_id in scenario_features[frame_id]:
+                    pedestrian_features.update(scenario_features[frame_id][ped_id])
+
+                zeros_frame_id = (4 - len(str(frame_id))) * "0"
+                pedistrian_file_name = f"{scenario_id.split('_')[1]}_{zeros_frame_id}{frame_id}_ped_{ped_id}"
+
+                if pedistrian_file_name not in filtered_peds:
+                    self.logger.debug(f"{pedistrian_file_name} not in filtered pedestrians")
+                    continue
+
+                output_file = os.path.join(output_folder, f"{pedistrian_file_name}.json")
+
+                FileUtils.save_json(pedestrian_features, output_file)
+                self.logger.info(f"Saved features for pedestrian {ped_id} at frame {frame_id} to {output_file}")
