@@ -1,12 +1,14 @@
 import os
 import sys
 
-from modules.features.features_pipeline import run_intention_binarizer_pipeline, run_pedestrian_movement_features_pipeline, extract_pedestrian_features
 from modules.attention.pedestrian_attention_pipeline import run_pedestrian_attention_pipeline
 from modules.attention.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
 from modules.avatar.avatar_pipeline import run_avatar_pipeline
 from modules.config.config_loader import ConfigLoader
 from modules.config.paths_loader import PathsLoader
+from modules.features.features_pipeline import run_intention_binarizer_pipeline, \
+    run_pedestrian_movement_features_pipeline, extract_pedestrian_features
+from modules.models.pie_model import train_pie_model
 from modules.utilities.logger import LoggerUtils
 
 logger = None
@@ -19,9 +21,12 @@ def main():
     run_intention_binarizer_pipeline()
     run_avatar_pipeline()
     extract_pedestrian_features()
+
     run_pedestrian_movement_features_pipeline()
     run_pedestrian_attention_pipeline()
     run_point_cloud_attention_pipeline()
+
+    train_pie_model()
 
 
 def configure_main():

@@ -48,6 +48,8 @@ def run_pedestrian_attention_pipeline():
     except Exception as e:
         logger.error(f"An error occurred during the pipeline execution: {e}")
         raise
+    
+    return None
 
 
 if __name__ == "__main__":
