@@ -9,7 +9,7 @@ class PointCloudAttentionModel(nn.Module):
         super(PointCloudAttentionModel, self).__init__()
         self.CAV = CentroidAwareVoxelization(embed_dim=embed_dim)
         self.attn_layer = LightweightSelfAttentionLayer(
-            in_channels=embed_dim*2, 
+            in_channels=embed_dim, 
             out_channels=embed_dim, 
             num_heads=num_heads, 
             kernel_size=kernel_size, 

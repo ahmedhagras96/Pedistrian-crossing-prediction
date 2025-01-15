@@ -21,8 +21,8 @@ def save_attention_results(output, attention_weights, output_file):
 
 def main():
     # Define input points and parameters
-    batch_size = 8
-    num_points = 1000
+    batch_size = 3
+    num_points = 600
     points = torch.rand(batch_size, num_points, 3)
 
     model = PointCloudAttentionModel(embed_dim=8)
@@ -31,8 +31,9 @@ def main():
     out, wei = model(points)
 
     print("Output shape:", out.shape)
+    print("Attention Weights shape:", wei.shape)
     
-    save_attention_results(out, wei, "LOKI/AttOut.json")
+    # save_attention_results(out, wei, "LOKI/AttOut.json")
 
 
 if __name__ == "__main__":

@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 
 class KernelGenerator:
-    def __init__(self, kernel_size, stride, dilation, dimension):
+    def __init__(self, kernel_size, dimension):
         self.kernel_size = kernel_size
-        self.stride = stride
-        self.dilation = dilation
+        # self.stride = stride
+        # self.dilation = dilation
         self.dimension = dimension
         if isinstance(kernel_size, int):
             self.kernel_volume = kernel_size ** dimension
@@ -23,7 +23,7 @@ class KernelGenerator:
         return offsets
 
     def get_kernel(self, tensor_stride, is_transpose=False):
-        region_type = "cube"  # Assuming a cube region type for simplicity
+        region_type = "cube"  
         region_offset = self.kernel_offsets
         return region_type, region_offset, tensor_stride
 
@@ -34,7 +34,7 @@ class LocalSelfAttentionBase(nn.Module):
         self.stride = stride
         self.dilation = dilation
         self.dimension = dimension
-        self.kernel_generator = KernelGenerator(kernel_size, stride, dilation, dimension)
+        self.kernel_generator = KernelGenerator(kernel_size, dimension)
         self.kernel_volume = self.kernel_generator.kernel_volume
 
     def get_kernel_map_and_out_key(self, coordinates, batch_indices):

@@ -34,7 +34,9 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         # Relative positional encoding
         self.inter_pos_enc = nn.Parameter(torch.FloatTensor(self.kernel_volume, self.num_heads, self.attn_channels))
         nn.init.normal_(self.inter_pos_enc, 0, 1)
- 
+
+        # Max pooling layer for global extraction
+        self.max_pool = nn.AdaptiveMaxPool1d(1)
     def forward(self, x, norm_points, batch_indices):
         B, N, C = x.shape
 
@@ -88,7 +90,11 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         out_F.scatter_add_(1, output_indices.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(B, -1, self.num_heads, self.attn_channels), weighted_v)
 
         # Output projection
-        wei = self.to_out(out_F.view(B, M, -1))  # [B, M, out_channels]
-        out = torch.sum(wei, dim=1)  # [B, out_channels]
-        return out, wei
+        out = self.to_out(out_F.view(B, M, -1))  # [B, M, out_channels]
+        out_permuted = out.permute(0, 2, 1)  # [B, out_channels, M]
+
+        # Max pooling for global extraction
+        out = self.max_pool(out_permuted).squeeze(-1) # [B, out_channels]
+
+        return out, attn
 

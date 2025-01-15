@@ -22,7 +22,7 @@ class CentroidAwareVoxelization(nn.Module):
 
         # Voxel feature generator MLP
         self.feature_mlp = nn.Sequential(
-            nn.Linear(4, embed_dim, bias=False),  # Input: [centroid_x, centroid_y, centroid_z, density]
+            nn.Linear(embed_dim+3, embed_dim, bias=False),  
             nn.BatchNorm1d(embed_dim),
             nn.GELU(),
             nn.Linear(embed_dim, embed_dim, bias=False),
@@ -32,14 +32,21 @@ class CentroidAwareVoxelization(nn.Module):
 
     def forward(self, points: torch.Tensor, voxel_size=0.05):
         """
+        Compute voxelized representation and features from point cloud data.
+
         Args:
             points (torch.Tensor): Tensor of shape (B, N, 3) representing point coordinates.
             voxel_size (float): Size of the voxel grid.
 
         Returns:
-            padded_aggregated_features (torch.Tensor): Padded features of shape (B, max_voxels, 2 * embed_dim).
+            padded_aggregated_features (torch.Tensor): Padded features of shape (B, max_voxels, embed_dim).
             padded_norm_points (torch.Tensor): Padded normalized points of shape (B, max_voxels, 3).
+            voxel_centroids (torch.Tensor): Centroids of each voxel.
+            voxel_counts (torch.Tensor): Number of points in each voxel.
+            pos_embs (torch.Tensor): Positional embeddings for the points.
+            batch_ids (torch.Tensor): Batch indices for each point.
         """
+
         batch_size, num_points, _ = points.shape
         device = points.device
 
@@ -74,25 +81,20 @@ class CentroidAwareVoxelization(nn.Module):
         # Compute positional embeddings
         pos_embs = self.pos_enc_mlp(norm_points)
 
-        # Aggregate positional embeddings per voxel
-        down_pos_embs = torch.zeros((unique_voxels.shape[0], pos_embs.shape[1]), device=device).index_add_(
-            0, inverse_indices, pos_embs
+        # Concatenate input features (coordinates) and positional embeddings
+        input_features = flat_points  # Shape: (B * N, 3)
+        concat_features = torch.cat([input_features, pos_embs], dim=1)
+
+        # Aggregate features per voxel by averaging
+        aggregated_features = torch.zeros((unique_voxels.shape[0], concat_features.shape[1]), device=device).index_add_(
+            0, inverse_indices, concat_features
         )
-        down_pos_embs /= voxel_counts.unsqueeze(1)
+        aggregated_features /= voxel_counts.unsqueeze(1)
+        aggregated_features = self.feature_mlp(aggregated_features)
 
-        # Compute voxel densities
-        voxel_densities = voxel_counts.unsqueeze(1).float()  # Shape: (num_voxels, 1)
-
-        # Generate voxel features
-        voxel_raw_features = torch.cat([voxel_centroids, voxel_densities], dim=1)
-        voxel_features = self.feature_mlp(voxel_raw_features)
-
-        # Concatenate positional embeddings and voxel features
-        aggregated_features = torch.cat([down_pos_embs, voxel_features], dim=1)
 
         # Determine maximum number of voxels per batch for padding
         max_voxels = batch_ids.bincount().max().item()
-
         # Initialize padded tensors
         padded_aggregated_features = torch.zeros((batch_size, max_voxels, aggregated_features.size(1)),
                                                 device=device, dtype=aggregated_features.dtype)
