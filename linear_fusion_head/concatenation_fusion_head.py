@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Base_fusion_head import BaseFusionHead
+from base_fusion_head import BaseFusionHead
 
 class ConcatenationFusionHead(BaseFusionHead):
     def __init__(self, feature_dim, output_dim=1):

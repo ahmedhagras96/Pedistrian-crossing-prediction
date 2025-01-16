@@ -2,12 +2,12 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-from utils.base import LocalSelfAttentionBase
+from attention_vector.point_cloud_attn_vector.utils.base import LocalSelfAttentionBase
 
 
 class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
-    def __init__(self, in_channels, out_channels=None, kernel_size=3, stride=1, dilation=1, num_heads=4):
-        super(LightweightSelfAttentionLayer, self).__init__(kernel_size, stride, dilation, dimension=3)
+    def __init__(self, in_channels, out_channels=None, kernel_size=3, num_heads=4):
+        super(LightweightSelfAttentionLayer, self).__init__(kernel_size, dimension=3)
 
         out_channels = in_channels if out_channels is None else out_channels
         assert out_channels % num_heads == 0, "out_channels must be divisible by num_heads"

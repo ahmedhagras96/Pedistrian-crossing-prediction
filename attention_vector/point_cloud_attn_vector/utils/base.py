@@ -22,17 +22,14 @@ class KernelGenerator:
         offsets = torch.stack(grid, dim=-1).view(-1, self.dimension)
         return offsets
 
-    def get_kernel(self, tensor_stride, is_transpose=False):
-        region_type = "cube"  
-        region_offset = self.kernel_offsets
-        return region_type, region_offset, tensor_stride
+
 
 class LocalSelfAttentionBase(nn.Module):
-    def __init__(self, kernel_size, stride, dilation, dimension):
+    def __init__(self, kernel_size, dimension):
         super(LocalSelfAttentionBase, self).__init__()
         self.kernel_size = kernel_size
-        self.stride = stride
-        self.dilation = dilation
+        # self.stride = stride
+        # self.dilation = dilation
         self.dimension = dimension
         self.kernel_generator = KernelGenerator(kernel_size, dimension)
         self.kernel_volume = self.kernel_generator.kernel_volume

@@ -58,7 +58,7 @@ def main():
         # Initialize the pedestrian processing pipeline
         pipeline = PedestrianProcessingPipeline(
             root_dir=LOKI_PATH,
-            csv_path=LOKI_PATH / "b_loki.csv",
+            csv_path=LOKI_PATH / "loki.csv",
             save_dir=AVATAR_OUTPUT_DIR,
             threshold_multiplier=THRESHOLD_MULTIPLIER,
         )

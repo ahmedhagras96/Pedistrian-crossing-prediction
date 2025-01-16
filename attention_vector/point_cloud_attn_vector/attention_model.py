@@ -1,11 +1,11 @@
 import torch.nn as nn
 
-from modules.light_weight_self_attention import LightweightSelfAttentionLayer
-from modules.centroid_aware_voxelization import CentroidAwareVoxelization
+from attention_vector.point_cloud_attn_vector.modules import LightweightSelfAttentionLayer
+from attention_vector.point_cloud_attn_vector.modules import CentroidAwareVoxelization
 
 
 class PointCloudAttentionModel(nn.Module):
-    def __init__(self, embed_dim, kernel_size=3, stride=1, dilation=1, num_heads=4):
+    def __init__(self, embed_dim, kernel_size=3, num_heads=4):
         super(PointCloudAttentionModel, self).__init__()
         self.CAV = CentroidAwareVoxelization(embed_dim=embed_dim)
         self.attn_layer = LightweightSelfAttentionLayer(
@@ -13,8 +13,6 @@ class PointCloudAttentionModel(nn.Module):
             out_channels=embed_dim, 
             num_heads=num_heads, 
             kernel_size=kernel_size, 
-            stride=stride,
-            dilation=dilation
             )
     
     def forward(self, x):

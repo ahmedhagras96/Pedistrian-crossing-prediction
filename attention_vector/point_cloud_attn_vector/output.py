@@ -1,7 +1,22 @@
 import torch
 import json
+import sys
 
-from attention_model import PointCloudAttentionModel
+"""
+if you want to run this file, run the following command: 
+python -m attention_vector.point_cloud_attn_vector.output 
+  
+"""
+
+# Ensure the script is run as a module
+if __package__ is None or __package__ == "":
+    print(
+        "Error: This script must be run as a module. Use the following command:\n"
+        "python -m attention_vector.point_cloud_attn_vector.output"
+    )
+    sys.exit(1)
+
+from .attention_model import PointCloudAttentionModel
 
 # Save Attention Results
 def save_attention_results(output, attention_weights, output_file):
@@ -25,7 +40,9 @@ def main():
     num_points = 600
     points = torch.rand(batch_size, num_points, 3)
 
-    model = PointCloudAttentionModel(embed_dim=8)
+    model = PointCloudAttentionModel(embed_dim=128, kernel_size=3)
+    print(sum(p.numel() for p in model.parameters()), "parameters")
+
 
     # Forward pass
     out, wei = model(points)
@@ -34,7 +51,5 @@ def main():
     print("Attention Weights shape:", wei.shape)
     
     # save_attention_results(out, wei, "LOKI/AttOut.json")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
