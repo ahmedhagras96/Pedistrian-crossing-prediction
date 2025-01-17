@@ -64,7 +64,9 @@ class PedestrianProcessor:
 
         # Filter to include only pedestrians
         df_pedestrians = df_labels3d[df_labels3d['labels'] == 'Pedestrian'].reset_index(drop=True)
+        # print("df_pedestrians: ",df_pedestrians)
 
+        #filter pedistrians according to existence in loki.csv file 
         if df_pedestrians.empty:
             print("No pedestrian data found in this sample.")
             exit(1)
@@ -746,16 +748,21 @@ class PedestrianProcessingPipeline:
                 cleaned_pcd = self.pointcloud_processor.preprocess_pcd(raw_pcd)
                 print(f"Preprocessed point cloud for Scenario: {scenario_id}, Frame: {frame_id}")
 
-                # Extract Pedestrian DataFrame
+                # Extract Pedestrian DataFrame 
                 df_pedestrians = self.pedestrian_processor.extract_pedestrian_df(labels3d_ndarray)
-                print(f"Extracted {len(df_pedestrians)} pedestrians in Scenario: {scenario_id}, Frame: {frame_id}")
+
+                #filter the return dataframe according if the pedistrian exist in loki.csv or not
+                df_loki = pd.read_csv(self.csv_path)  # DataFrame for loki.csv
+                filtered_pedestrians = df_pedestrians[df_pedestrians['track_id'].isin(df_loki['Ped_ID'])]
+
+                print(f"Extracted {len(filtered_pedestrians)} pedestrians in Scenario: {scenario_id}, Frame: {frame_id}")
 
                 if df_pedestrians.empty:
                     print(f"No pedestrians found in Scenario: {scenario_id}, Frame: {frame_id}.")
                     continue
                     
                 # Extract Pedestrian Point Clouds
-                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, df_pedestrians)
+                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, filtered_pedestrians)
                 print(f"Extracted {len(pedestrian_pcds)} pedestrian point clouds.")
 
                 if not pedestrian_pcds:
@@ -782,7 +789,8 @@ class PedestrianProcessingPipeline:
                 if df_pedestrians.empty == False:
                     df_pedestrians_filtered['scenario_id'] = scenario_id
                     df_pedestrians_filtered['frame_id'] = frame_id
-                    all_pedestrians_filtered.append(df_pedestrians_filtered)
+                    df_ped_filt_cols = df_pedestrians_filtered[['track_id', 'scenario_id', 'frame_id', 'intended_actions']]
+                    all_pedestrians_filtered.append(df_ped_filt_cols)
                     
                 # Save pedestrian PCDs asynchronously
                 save_thread = threading.Thread(target=self.save_pedestrian_pcds, args=(pedestrian_pcd_dict,))

@@ -17,14 +17,21 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
 
     # Track data
     previous_positions = {}
-    pending_corrections = {}
     perv_ego_position = None
 
     scenario_features = {}
 
     for odom_file, label_file in zip(odom_files, label_files):
-        cleaned_name = odom_file.split("_")[1].split(".")[0].split()[0]
-        frame_id = int(cleaned_name)
+        print(f"odom file name is {odom_file}")
+        odom_frame_id = int(odom_file.split("_")[1].split(".")[0].split()[0])
+        label_frame_id = int(label_file.split("_")[1].split(".")[0].split()[0])
+
+        # Validate that the frame IDs match
+        assert odom_frame_id == label_frame_id, (
+            f"Frame mismatch: odom file {odom_file} (frame {odom_frame_id}) "
+            f"does not match label file {label_file} (frame {label_frame_id})"
+        )
+
 
         odom_path = os.path.join(scenario_path, odom_file)
         label_path = os.path.join(scenario_path, label_file)
@@ -35,13 +42,9 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
 
         # Collect features for this frame
         frame_features = {}
-
+        print(f"pedistrians extracted from frame {odom_frame_id} is {pedestrians}")
         for ped_id, ped_data in pedestrians.items():
             ped_x, ped_y = ped_data["x"], ped_data["y"]
-
-            # Ignore pedestrians behind the ego vehicle
-            if ped_x < 0:
-                continue
 
             if ped_id in previous_positions:
                 # Calculate speed, distance, and movement status
@@ -50,19 +53,10 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
                     prev_position, (ped_x, ped_y),perv_ego_position,ego_position,fps
                 )
 
-                # Remove pending corrections for this pedestrian if applicable
-                if ped_id in pending_corrections:
-                    pending_frame_id = pending_corrections[ped_id]
-                    del scenario_features[pending_frame_id][ped_id]
-                    del pending_corrections[ped_id]
-
             else:
                 # Initialize for the first frame
                 speed, distance = 0, math.sqrt(ped_x**2 + ped_y**2)
                 movement_status = -1  #Unknown
-
-                # Add this pedestrian to pending corrections
-                pending_corrections[ped_id] = frame_id
 
             # Save current position for next frame
             previous_positions[ped_id] = (ped_x, ped_y)
@@ -75,7 +69,7 @@ def get_speed_dist_ms_scenario(scenario_path,fps):
             }
 
         # Update scenario features
-        scenario_features[frame_id] = frame_features
+        scenario_features[odom_frame_id] = frame_features
 
         # Update previous ego position
         perv_ego_position = ego_position
@@ -207,7 +201,7 @@ def calculate_walking_toward_vehicle(pedestrian_positions_frames, vehicle_positi
 #             with open(output_file, 'w') as f:
 #                 json.dump(existing_data, f, indent=4)
 
-def save_features_per_pedestrian(scenario_id, group_status, walking_status, scenario_features, output_folder,pid_avatars_dir):
+def save_features_per_pedestrian(scenario_id, group_status, walking_status, speed_distance_feas, output_folder,pid_avatars_dir):
 
     #get list of filtered pedistrians from the peistrian avatars directory
     avatar_ply_files = [f for f in os.listdir(pid_avatars_dir) if f.endswith('.ply')]
@@ -215,23 +209,24 @@ def save_features_per_pedestrian(scenario_id, group_status, walking_status, scen
     print("filtered_peds: ",filtered_peds)
     for frame_id in group_status.keys():
         for ped_id, group_value in group_status[frame_id].items():
-            walking_value = walking_status.get(frame_id, {}).get(ped_id, 0)
 
+            #first check if this pedistrian in this senario and frame exist in avatar directory
+            zeros_frame_id = (4 - len(str(frame_id))) * "0"
+            pedistrian_file_name = f"{scenario_id.split('_')[1]}_{zeros_frame_id}{frame_id}_ped_{ped_id}"
+            if pedistrian_file_name not in filtered_peds:
+                print(f"{pedistrian_file_name} not in filtered pedistrians")
+                continue
+            
+            # extract all needed featuers for this filtered pedistrian
+            walking_value = walking_status.get(frame_id, {}).get(ped_id, 0)
             pedestrian_features = {
                 "frame_id": frame_id,
                 "group_status": group_value,
                 "walking_toward_vehicle": walking_value
             }
-
-            if frame_id in scenario_features and ped_id in scenario_features[frame_id]:
-                pedestrian_features.update(scenario_features[frame_id][ped_id])
-
-            zeros_frame_id = (4 - len(str(frame_id))) * "0"
-            pedistrian_file_name = f"{scenario_id.split('_')[1]}_{zeros_frame_id}{frame_id}_ped_{ped_id}"
-
-            if pedistrian_file_name not in filtered_peds:
-                print(f"{pedistrian_file_name} not in filtered pedistrians")
-                continue
+            # if frame_id in speed_distance_feas and ped_id in speed_distance_feas[frame_id]:
+            print(f"current frame ID and Ped ID we updating is:{frame_id},{ped_id}")
+            pedestrian_features.update(speed_distance_feas[frame_id][ped_id])
 
             output_file = os.path.join(output_folder, f"{pedistrian_file_name}.json")
 
@@ -249,7 +244,7 @@ def extract_pedistrian_featuers(dataset_folder, output_folder,ped_avatar_dir):
             continue
 
         print(f"Processing scenario: {scenario_name}...")
-        output_file = os.path.join(output_folder, f"{scenario_name}_features.json")
+        # output_file = os.path.join(output_folder, f"{scenario_name}_features.json")
 
         pedestrian_positions_frames = load_label3d_positions(scenario_path)
         vehicle_positions = load_vehicle_positions(scenario_path)
@@ -257,9 +252,9 @@ def extract_pedistrian_featuers(dataset_folder, output_folder,ped_avatar_dir):
         walking_status = calculate_walking_toward_vehicle(pedestrian_positions_frames, vehicle_positions)
 
         ##add distance and speed featuers
-        scenario_path = os.path.join(dataset_folder, scenario_name)
+        # scenario_path = os.path.join(dataset_folder, scenario_name)
         speed_distance_feas = get_speed_dist_ms_scenario(scenario_path, 5)
-
+        print("//////////speed_distance_feas/////////:",speed_distance_feas)
         # save_features(group_status, walking_status, output_file)
         save_features_per_pedestrian(scenario_name,group_status, walking_status,speed_distance_feas, output_folder,ped_avatar_dir)
         # print(f"Features saved for {scenario_name} to {output_file}")
