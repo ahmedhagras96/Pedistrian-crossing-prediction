@@ -1,6 +1,6 @@
 ﻿import math
 
-from modules.base_module import BaseModule
+from modules.utilities.base_module import BaseModule
 
 
 class PedestrianDataUtils(BaseModule):

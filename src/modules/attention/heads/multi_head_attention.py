@@ -2,7 +2,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from modules.utilities.logger import LoggerUtils
+from modules.config.logger import LoggerUtils
 
 
 class MultiHeadAttention(nn.Module):

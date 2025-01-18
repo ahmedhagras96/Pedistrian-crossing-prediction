@@ -1,6 +1,6 @@
 import open3d as o3d
 
-from modules.base_module import BaseModule
+from modules.utilities.base_module import BaseModule
 
 
 class Open3DUtils(BaseModule):

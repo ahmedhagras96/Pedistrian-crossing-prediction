@@ -2,15 +2,15 @@
 
 import pandas as pd
 
-from modules.base_module import BaseModule
-from modules.utilities.logger import LoggerUtils
+from modules.config.logger import LoggerUtils
+from modules.utilities.base_module import BaseModule
 
 
 class FileUtils(BaseModule):
     """
     A utility class for dealing with files such as json and csv files.
     """
-    logger = LoggerUtils.get_logger(__name__)
+    logger = LoggerUtils.get_logger("FileUtils")
 
     @staticmethod
     def load_json(file_path):

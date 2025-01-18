@@ -2,8 +2,8 @@
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
+from modules.config.logger import LoggerUtils
 from modules.utilities.file_utils import FileUtils
-from modules.utilities.logger import LoggerUtils
 
 
 class FeatureLoader:

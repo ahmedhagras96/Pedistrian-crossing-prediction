@@ -1,5 +1,6 @@
 ﻿import torch
-from modules.utilities.logger import LoggerUtils
+
+from modules.config.logger import LoggerUtils
 
 
 class KernelGenerator:

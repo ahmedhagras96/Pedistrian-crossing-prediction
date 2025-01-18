@@ -1,12 +1,12 @@
-settings:
+model:
   batch_size: 32
-  learning_rate: 0.001
-  epochs: 50
-
-environment:
-  seed: 42
-  device: "cuda" # Options: 'cuda', 'cpu'
+  embed_dim: 128
+  num_epochs: 1
+  kernel_size: 3
+  num_heads: 4
+  train_set_ratio: 0.7
+  validation_set_ratio: 0.2
 
 logging:
   level: "DEBUG"
-  format: "[%(asctime)s] [%(levelname)s] %(message)s"
+  format: "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"

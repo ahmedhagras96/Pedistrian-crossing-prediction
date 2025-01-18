@@ -1,7 +1,7 @@
 ﻿import os
 
+from modules.config.logger import LoggerUtils
 from modules.utilities.file_utils import FileUtils
-from modules.utilities.logger import LoggerUtils
 
 
 class FeatureMerger:

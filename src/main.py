@@ -1,55 +1,23 @@
-import os
-import sys
-
-from modules.attention.pedestrian_attention_pipeline import run_pedestrian_attention_pipeline
-from modules.attention.point_cloud_attention_pipeline import run_point_cloud_attention_pipeline
-from modules.avatar.avatar_pipeline import run_avatar_pipeline
 from modules.config.config_loader import ConfigLoader
-from modules.config.paths_loader import PathsLoader
-from modules.features.features_pipeline import run_intention_binarizer_pipeline, \
-    run_pedestrian_movement_features_pipeline, extract_pedestrian_features
-from modules.models.pie_model import train_pie_model
-from modules.utilities.logger import LoggerUtils
+from modules.config.configure_main import configure_main
+from modules.config.logger import LoggerUtils
+from modules.config.paths_loader import PATHS, _PathsLoader
+from modules.model.training.training_pipeline import run_training
 
 logger = None
 
 
 def main():
-    # !Note: If any logging messages are obstructing or getting in the way, look them up and change log level from info to debug
-    configure_main()
-
-    run_intention_binarizer_pipeline()
-    run_avatar_pipeline()
-    extract_pedestrian_features()
-
-    run_pedestrian_movement_features_pipeline()
-    run_pedestrian_attention_pipeline()
-    run_point_cloud_attention_pipeline()
-
-    train_pie_model()
-
-
-def configure_main():
-    # Sets the source path to ensure that the program can locate module files correctly using sys.path.
-    # Appends the directory of the current file to the Python module search path to ensure modules in the same directory can be imported.
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-    # Add the src directory to sys.path
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    src_path = os.path.join(current_dir, "..")
-    sys.path.insert(0, src_path)
-
-    # Ensure all project folders exist
-    PathsLoader.ensure_folders_exist()
-
-    # Loads the config file for global usage
-    ConfigLoader.load_config(PathsLoader.get_folder_path(PathsLoader.Paths.CONFIG_FILE))
-
-    # Configures the logging system to log messages to a unified log file & retrieves a logger instance.
-    LoggerUtils.configure_unified_logging_file(
-        os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.LOGS), "logs.log"))
-    # logger = LoggerUtils.get_logger(__name__)
+    # run_training()
+    pass
 
 
 if __name__ == '__main__':
+    # !Note: If any logging messages are obstructing or getting in the way, look them up and change log level from info to debug
+    configure_main()
+    ConfigLoader.load_config(PATHS.CONFIG_FILE)
+
+    LoggerUtils.configure_unified_logging_file(PATHS.LOG_FILE)
+    logger = LoggerUtils.get_logger(__name__)
+
     main()

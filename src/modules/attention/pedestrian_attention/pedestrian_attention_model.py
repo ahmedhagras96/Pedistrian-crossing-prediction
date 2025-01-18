@@ -1,7 +1,7 @@
 ﻿from modules.attention.heads.multi_head_attention import MultiHeadAttention
+from modules.config.logger import LoggerUtils
 from modules.features.processors.feature_loader import FeatureLoader
 from modules.utilities.file_utils import FileUtils
-from modules.utilities.logger import LoggerUtils
 
 
 class PedestrianAttentionModel:

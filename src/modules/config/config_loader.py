@@ -2,7 +2,7 @@
 
 import yaml
 
-from modules.config.paths_loader import PathsLoader
+from modules.config.paths_loader import PATHS
 
 
 class ConfigLoader:
@@ -42,7 +42,7 @@ class ConfigLoader:
                 raise RuntimeError(f"Error parsing YAML file: {e}")
 
     @staticmethod
-    def get_config_value(keys: str):
+    def get(keys: str):
         """
         Retrieves a configuration value given a dot-separated key string.
 
@@ -58,7 +58,7 @@ class ConfigLoader:
         """
         if ConfigLoader._config is None:
             try:
-                ConfigLoader.load_config(PathsLoader.get_folder_path(PathsLoader.Paths.CONFIG_FILE))
+                ConfigLoader.load_config(PATHS.CONFIG_FILE)
             except:
                 raise RuntimeError("Configuration is not loaded. Call 'load_config' first.")
 
@@ -101,7 +101,7 @@ class ConfigLoader:
         missing_keys = []
         for key in required_keys:
             try:
-                ConfigLoader.get_config_value(key)
+                ConfigLoader.get(key)
             except KeyError:
                 missing_keys.append(key)
 

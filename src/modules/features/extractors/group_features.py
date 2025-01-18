@@ -1,7 +1,7 @@
 ﻿import numpy as np
 from sklearn.cluster import DBSCAN
 
-from modules.utilities.logger import LoggerUtils
+from modules.config.logger import LoggerUtils
 
 
 class GroupFeatures:

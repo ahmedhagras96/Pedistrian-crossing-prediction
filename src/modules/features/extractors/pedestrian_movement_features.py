@@ -1,9 +1,8 @@
 ﻿import math
 import os
 
-from archive.reconstruction.modules.utils.file_utils import FileUtils
+from modules.config.logger import LoggerUtils
 from modules.utilities.file_utils import FileUtils
-from modules.utilities.logger import LoggerUtils
 from modules.utilities.pedestrian_data_utils import PedestrianDataUtils
 
 
@@ -262,7 +261,9 @@ class PedestrianMovementFeatures:
 
             if pedestrian_id in pending_corrections:
                 pending_frame_id = pending_corrections.pop(pedestrian_id)
-                del previous_positions[pending_frame_id][pedestrian_id]
+                # TODO: Fix error in deletion
+                del previous_positions[pedestrian_id]
+                # del previous_positions[pending_frame_id][pedestrian_id]
         else:
             speed, distance = 0, math.sqrt(position[0] ** 2 + position[1] ** 2)
             movement_status = "Unknown"

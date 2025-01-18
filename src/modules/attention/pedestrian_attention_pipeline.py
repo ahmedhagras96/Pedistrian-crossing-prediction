@@ -1,9 +1,9 @@
 ﻿import os
 
 from modules.attention.pedestrian_attention.pedestrian_attention_model import PedestrianAttentionModel
-from modules.config.paths_loader import PathsLoader
+from modules.config.logger import LoggerUtils
+from modules.config.paths_loader import PATHS
 from modules.features.processors.feature_merger import FeatureMerger
-from modules.utilities.logger import LoggerUtils
 
 
 def run_pedestrian_attention_pipeline():
@@ -12,11 +12,11 @@ def run_pedestrian_attention_pipeline():
     """
 
     # Initialize logger
-    logger = LoggerUtils.get_logger(__name__)
+    logger = LoggerUtils.get_logger("PedestrianAttentionPipeline")
 
     # Directories for input and output
-    processed_data_path = PathsLoader.get_folder_path(PathsLoader.Paths.PROCESSED_DATA)
-    output_data_path = PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT)
+    processed_data_path = PATHS.PROCESSED_DATA
+    output_data_path = PATHS.OUTPUT_DATA
     group_walking_dir = os.path.join(processed_data_path, "features_group_walking")
     speed_distance_dir = os.path.join(processed_data_path, "features_speed_distance")
     merged_output_dir = os.path.join(output_data_path, "features_merged")

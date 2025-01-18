@@ -1,6 +1,6 @@
 ﻿import os
 
-from modules.base_module import BaseModule
+from modules.utilities.base_module import BaseModule
 from modules.utilities.file_utils import FileUtils
 
 

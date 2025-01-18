@@ -1,11 +1,11 @@
 ﻿import os
 
-from modules.config.paths_loader import PathsLoader
+from modules.config.logger import LoggerUtils
+from modules.config.paths_loader import PATHS
 from modules.features.extractors.group_features import GroupFeatures
 from modules.features.extractors.pedestrian_movement_features import PedestrianMovementFeatures
-from modules.loaders.scenario_loader import ScenarioLoader
-from modules.preprocessing.intention_binarizer import IntentionBinarizer
-from modules.utilities.logger import LoggerUtils
+from modules.features.loaders.scenario_loader import ScenarioLoader
+from modules.features.processors.intention_binarizer import IntentionBinarizer
 from modules.utilities.scenario_utils import ScenarioUtils
 
 
@@ -15,12 +15,11 @@ def run_intention_binarizer_pipeline():
     """
 
     # Initialize logger
-    logger = LoggerUtils.get_logger(__name__)
+    logger = LoggerUtils.get_logger("IntentionBinarizerPipeline")
 
     # Define dataset paths
-    loki_path = PathsLoader.get_folder_path(PathsLoader.Paths.LOKI)
-    loki_csv_path = os.path.join(loki_path, "loki.csv")
-    output_csv_path = os.path.join(loki_path, "binloki.csv")
+    loki_csv_path = PATHS.LOKI_CSV_PATH
+    output_csv_path = PATHS.BIN_LOKI_CSV_PATH
 
     try:
         # Step 1: Load and preprocess the dataset
@@ -45,12 +44,11 @@ def run_pedestrian_movement_features_pipeline():
     """
 
     # Initialize logger
-    logger = LoggerUtils.get_logger(__name__)
+    logger = LoggerUtils.get_logger("PedestrianMovementFeaturesPipeline")
 
     # Define dataset and output directories
-    dataset_directory = PathsLoader.get_folder_path(PathsLoader.Paths.RAW_DATA)
-    output_directory = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.PROCESSED_DATA),
-                                    "features_group_walking")
+    dataset_directory = PATHS.RAW_DATA
+    output_directory = os.path.join(PATHS.FEATURES, "features_group_walking")
 
     try:
         # Initialize processor
@@ -73,11 +71,11 @@ def extract_pedestrian_features():
     Orchestrate extraction of pedestrian features from dataset.
     """
     # Initialize logger
-    logger = LoggerUtils.get_logger(__name__)
+    logger = LoggerUtils.get_logger("ExtractPedestrianFeaturesPipeline")
 
-    dataset_folder = PathsLoader.get_folder_path(PathsLoader.Paths.RAW_DATA)
-    output_folder = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.OUTPUT), "pedestrian_features")
-    ped_avatar_dir = os.path.join(PathsLoader.get_folder_path(PathsLoader.Paths.PROCESSED_DATA), "saved_pedestrians")
+    dataset_folder = PATHS.RAW_DATA
+    output_folder = os.path.join(PATHS.FEATURES, "pedestrian_features")
+    ped_avatar_dir = os.path.join(PATHS.PROCESSED_DATA, "saved_pedestrians")
 
     logger.info("Starting pedestrian feature extraction.")
     if not os.path.exists(output_folder):
