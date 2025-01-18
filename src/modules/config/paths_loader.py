@@ -32,7 +32,7 @@ class _PathsLoader:
     LOG_FILE: str = "src/logs/log.log"
     LOKI_CSV_PATH: str = "data/loki.csv"
     BIN_LOKI_CSV_PATH: str = "data/bin_loki.csv"
-    BIN_FILTERED_PEDESTRIANS_CSV_PATH: str = "data/bin_filtered_pedestrian.csv"
+    BIN_FILTERED_PEDESTRIANS_CSV_PATH: str = "data/b_avatar_filtered_pedistrians.csv"
     POINT_CLOUD_ATTENTION: str = "data/output/point_cloud_attention.json"
 
     def __post_init__(self):

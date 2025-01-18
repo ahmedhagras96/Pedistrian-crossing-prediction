@@ -1,14 +1,14 @@
 from modules.config.config_loader import ConfigLoader
 from modules.config.configure_main import configure_main
 from modules.config.logger import LoggerUtils
-from modules.config.paths_loader import PATHS, _PathsLoader
+from modules.config.paths_loader import PATHS
 from modules.model.training.training_pipeline import run_training
 
 logger = None
 
 
 def main():
-    # run_training()
+    run_training()
     pass
 
 

@@ -44,7 +44,7 @@ class LoggerUtils:
 
             root_logger = logging.getLogger()
             file_handler = logging.FileHandler(log_file, mode='w')
-            file_formatter = logging.Formatter(ConfigLoader.get("logger.format"))
+            file_formatter = logging.Formatter(ConfigLoader.get("logging.format"))
             file_handler.setFormatter(file_formatter)
             root_logger.addHandler(file_handler)
             root_logger.setLevel(ConfigLoader.get("logging.level"))
