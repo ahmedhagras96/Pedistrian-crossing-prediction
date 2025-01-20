@@ -72,6 +72,8 @@ class PedestrianMapAligner(BaseAligner):
                     continue
 
                 transformation_matrix = self.get_transformation_matrix(odom)
+                translation = transformation_matrix[:3, 3]
+                rotation = transformation_matrix[:3, :3]
                 objects = label3d[label3d['labels'].isin(Reconstuction3DConfig.tracked_objects)]
 
                 # Process pedestrian data
@@ -87,6 +89,8 @@ class PedestrianMapAligner(BaseAligner):
                         yaw_matrix = PointCloudUtils.get_yaw_matrix(yaw)
                         bounding_box_o3d = o3d.geometry.OrientedBoundingBox(center_box, yaw_matrix, [l, w, h])
                         scaled_box = bounding_box_o3d.scale(scaling_factor, bounding_box_o3d.get_center())
+                        scaled_box.translate(translation)
+                        scaled_box.rotate(rotation)
 
                         points_ix = bounding_box_o3d.get_point_indices_within_bounding_box(pcd.points)
                         obj_ply = pcd.select_by_index(points_ix)
