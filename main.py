@@ -5,6 +5,7 @@ from pathlib import Path
 from torch_snippets.torch_loader import Report
 from linear_fusion_head.attention_Base_fusion import AttentionFusionHead
 from attention_vector.point_cloud_attn_vector import PointCloudAttentionModel
+from attention_vector.Pedestrian_PC_Attention import PointNetFeatureExtractor
 
 from DataLoader import get_data_loaders
 
@@ -33,11 +34,17 @@ train_dl, val_dl, test_dl = get_data_loaders(
 
 # init attention model (CAV & LWSA)
 pcd_attention_model = PointCloudAttentionModel(embed_dim=EMBED_DIM, kernel_size=KERNEL_SIZE, num_heads=NUM_HEADS)
+
+pointnet_model = PointNetFeatureExtractor(input_dim=3, output_dim=64)
+
+
 def extract_3d_attention_vectors(batch):
     out, wei = pcd_attention_model(batch)
     return out
+    
 def extract_pedestrian_cloud_attention_vectors(batch):
-    pass
+    attention_vectors = pointnet_model(batch) 
+    return attention_vectors
 
 def extract_pedestrian_features_attention_vectors(batch):
     pass
