@@ -11,7 +11,7 @@ class AttentionFusionHead(BaseFusionHead):
             vector_dim (int): Dimensionality of attention vectors from each source (default: 64).
             num_heads (int): Number of attention heads for fusion.
         """
-        super(AttentionFusionHead, self).__init__(feature_dim=vector_dim)
+        super(AttentionFusionHead, self).__init__(feature_dim=3)
 
         # Attention-based fusion layer
         self.fusion_attention = nn.MultiheadAttention(embed_dim=vector_dim, num_heads=num_heads)

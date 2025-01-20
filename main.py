@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 import pandas as pd
 from pathlib import Path
+from itertools import chain
 from torch_snippets.torch_loader import Report
 from linear_fusion_head.attention_Base_fusion import AttentionFusionHead
 from attention_vector.point_cloud_attn_vector import PointCloudAttentionModel
-from attention_vector.Pedestrian_PC_Attention import PointNetFeatureExtractor
+from attention_vector.Pedestrian_PC_Attention.Ped_Att_Model import PointNetFeatureExtractor
 
 from DataLoader import get_data_loaders
 
@@ -51,8 +52,8 @@ def extract_pedestrian_features_attention_vectors(batch):
 
 
 # Compute class weights
-label_data = pd.read_csv(b_loki_CSV_PATH)
-class_counts = label_data['Intention'].value_counts()
+label_data = pd.read_csv(LABEL_CSV_PATH)
+class_counts = label_data['intended_actions'].value_counts()
 total_samples = class_counts.sum()
 
 # Calculate weights
@@ -62,9 +63,14 @@ class_weights = torch.tensor(
 )
 
 
-model = AttentionFusionHead(vector_dim=64, num_heads=4)  # Initialize your model
+model = AttentionFusionHead(vector_dim=EMBED_DIM, num_heads=NUM_HEADS)  # Initialize your model
 criterion = nn.BCELoss(weight=class_weights)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+parameters = chain(model.parameters(), pcd_attention_model.parameters(), pointnet_model.parameters())
+optimizer = torch.optim.Adam(params=parameters, lr=0.001)
+
+print('Number of parameters:',sum(p.numel() for p in model.parameters()), " parameters")
+
 
 
 def train_batch(model, criterion, optimizer):
@@ -89,9 +95,9 @@ def train_batch(model, criterion, optimizer):
         optimizer.step()
 
         total_loss += loss.item()
-        average_loss = total_loss / len(train_dl)
+    average_loss = total_loss / len(train_dl)
 
-        return average_loss
+    return average_loss
 
 
 @torch.no_grad()
@@ -112,9 +118,9 @@ def val_batch(model, criterion):
         loss = criterion(outputs, target)
 
         total_loss += loss.item()
-        average_loss = total_loss / len(val_dl)
+    average_loss = total_loss / len(val_dl)
 
-        return average_loss     
+    return average_loss     
     
 
 log = Report(N_EPOCHS)
