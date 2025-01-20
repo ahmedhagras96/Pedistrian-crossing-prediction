@@ -35,7 +35,7 @@ train_dl, val_dl, test_dl = get_data_loaders(
 # init attention model (CAV & LWSA)
 pcd_attention_model = PointCloudAttentionModel(embed_dim=EMBED_DIM, kernel_size=KERNEL_SIZE, num_heads=NUM_HEADS)
 
-pointnet_model = PointNetFeatureExtractor(input_dim=3, output_dim=64)
+pointnet_model = PointNetFeatureExtractor(input_dim=3, output_dim=EMBED_DIM)
 
 
 def extract_3d_attention_vectors(batch):
