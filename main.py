@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import pandas as pd
 from pathlib import Path
 from torch_snippets.torch_loader import Report
 from linear_fusion_head.attention_Base_fusion import AttentionFusionHead
@@ -50,8 +50,20 @@ def extract_pedestrian_features_attention_vectors(batch):
     pass
 
 
+# Compute class weights
+label_data = pd.read_csv(b_loki_CSV_PATH)
+class_counts = label_data['Intention'].value_counts()
+total_samples = class_counts.sum()
+
+# Calculate weights
+class_weights = torch.tensor(
+    [total_samples / (len(class_counts) * count) for count in class_counts],
+    dtype=torch.float
+)
+
+
 model = AttentionFusionHead(vector_dim=64, num_heads=4)  # Initialize your model
-criterion = nn.BCELoss()
+criterion = nn.BCELoss(weight=class_weights)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
 
