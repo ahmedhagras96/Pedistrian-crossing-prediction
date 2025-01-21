@@ -7,6 +7,7 @@ from torch_snippets.torch_loader import Report
 from linear_fusion_head.attention_Base_fusion import AttentionFusionHead
 from attention_vector.point_cloud_attn_vector import PointCloudAttentionModel
 from attention_vector.Pedestrian_PC_Attention.Ped_Att_Model import PointNetFeatureExtractor
+from features_extraction.Multi_head_attention_layer import MultiHeadAttention
 
 from DataLoader import get_data_loaders
 
@@ -27,6 +28,10 @@ N_EPOCHS = 1
 KERNEL_SIZE = 3
 NUM_HEADS = 4
 
+# Params for model (multi head attention model)
+f_input_dim = 5
+f_num_heads = 5
+
 # Create data loaders
 train_dl, val_dl, test_dl = get_data_loaders(
     PEDESTRIAN_DIR, ENVIRONMENT_DIR, FEATURE_DIR, LABEL_CSV_PATH,
@@ -38,6 +43,7 @@ pcd_attention_model = PointCloudAttentionModel(embed_dim=EMBED_DIM, kernel_size=
 
 pointnet_model = PointNetFeatureExtractor(input_dim=3, output_dim=EMBED_DIM)
 
+featuers_attention_model = MultiHeadAttention(input_dim= f_input_dim, num_heads=f_num_heads, output_dim=EMBED_DIM)
 
 def extract_3d_attention_vectors(batch):
     out, wei = pcd_attention_model(batch)
@@ -48,7 +54,8 @@ def extract_pedestrian_cloud_attention_vectors(batch):
     return attention_vectors
 
 def extract_pedestrian_features_attention_vectors(batch):
-    pass
+    out, wei = featuers_attention_model(batch)
+    return out
 
 
 # Compute class weights
