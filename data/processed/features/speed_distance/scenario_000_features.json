@@ -1,0 +1,80 @@
+{
+    "8": {},
+    "10": {
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 9.689469078218703,
+            "distance": 73.19805768579783,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 12.080319816296562,
+            "distance": 46.00477236798511,
+            "movement_status": 1
+        }
+    },
+    "12": {
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 9.977533958668475,
+            "distance": 71.20954526034,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 14.300202572165896,
+            "distance": 43.20366334406266,
+            "movement_status": 1
+        }
+    },
+    "14": {
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 10.155930267160866,
+            "distance": 69.17872542979865,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 12.372352185712806,
+            "distance": 40.77314325018577,
+            "movement_status": 1
+        }
+    },
+    "16": {
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 9.931738810323074,
+            "distance": 67.19337167717137,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 13.306800045527334,
+            "distance": 38.15855015134892,
+            "movement_status": 1
+        }
+    },
+    "18": {
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 9.929943525629039,
+            "distance": 65.2128242573413,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 13.283751840856965,
+            "distance": 35.56917600187855,
+            "movement_status": 1
+        }
+    },
+    "20": {
+        "4ab64275-275c-4f58-8ed5-39837a4a265d": {
+            "speed": 9.179110827256457,
+            "distance": 73.11214493549454,
+            "movement_status": 1
+        },
+        "8f62a01b-8bfe-4bde-87f7-52bb205d4cb5": {
+            "speed": 9.603270538864914,
+            "distance": 63.292886476650864,
+            "movement_status": 1
+        },
+        "9abd7efb-f4b6-4a67-b269-188213a22d79": {
+            "speed": 12.59585097196125,
+            "distance": 33.133714546254204,
+            "movement_status": 1
+        }
+    }
+}
