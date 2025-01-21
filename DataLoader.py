@@ -68,6 +68,10 @@ class PedestrianPointCloudDataset(Dataset):
         # Validate that all required files exist
         self._validate_files()
 
+        # Load all features to determine scaling parameters
+        self.scaler = MinMaxScaler()
+        self._compute_scaling_parameters()
+
     def _validate_files(self):
         """
         Validate that all required files exist for each pedestrian ID.
@@ -81,6 +85,19 @@ class PedestrianPointCloudDataset(Dataset):
             if p_id not in self.feature_files:
                 raise ValueError(f"Missing feature file for pedestrian ID: {p_id}")
 
+    def _compute_scaling_parameters(self):
+        """
+        Compute the scaling parameters for the speed and distance features across the entire dataset.
+        """
+        features = []
+        for pedestrian_id in self.pedestrian_ids:
+            with open(self.feature_files[pedestrian_id], "r") as f:
+                data = json.load(f)
+                features.append([data["speed"], data["distance"]])
+
+        features = pd.DataFrame(features, columns=["speed", "distance"])
+        self.scaler.fit(features)
+    
     def __len__(self):
         return len(self.pedestrian_ids)
 
@@ -102,10 +119,18 @@ class PedestrianPointCloudDataset(Dataset):
             features = json.load(f)
 
         label = self.labels[pedestrian_id]
+
+        # Normalize speed and distance
+        speed, distance = self.scaler.transform([[features["speed"], features["distance"]]])[0]
+        movement_status = 1 if features["movement_status"] == 1 else 0  # Binary value: 0 or 1
+
         pedestrian_features = torch.tensor(
             [
                 features["group_status"],
                 features["walking_toward_vehicle"],
+                speed,
+                distance,
+                movement_status,
             ],
             dtype=torch.float32,
         )
