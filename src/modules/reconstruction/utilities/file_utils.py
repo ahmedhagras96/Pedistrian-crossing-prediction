@@ -1,0 +1,86 @@
+﻿import glob
+import os
+from typing import List
+
+from modules.config.logger import Logger
+
+
+class FileUtils:
+    """
+    Utility class for handling file and directory operations.
+    """
+
+    _logger = Logger.get_logger("FileUtils")
+
+    @staticmethod
+    def file_exists(file_path: str) -> bool:
+        """
+        Check if a file exists.
+
+        Args:
+            file_path (str): Path to the file.
+
+        Returns:
+            bool: True if the file exists, False otherwise.
+        """
+        exists = os.path.isfile(file_path)
+        # FileUtils._logger.debug(f"Checking if file exists: {file_path} -> {exists}")
+        return exists
+
+    @staticmethod
+    def dir_exists(dir_path: str) -> bool:
+        """
+        Check if a directory exists.
+
+        Args:
+            dir_path (str): Path to the directory.
+
+        Returns:
+            bool: True if the directory exists, False otherwise.
+        """
+        exists = os.path.isdir(dir_path)
+        FileUtils._logger.debug(f"Checking if directory exists: {dir_path} -> {exists}")
+        return exists
+
+    @staticmethod
+    def create_dir(dir_path: str) -> None:
+        """
+        Create a directory if it does not exist.
+
+        Args:
+            dir_path (str): Path to the directory.
+
+        Raises:
+            OSError: If the directory cannot be created.
+
+        Returns:
+            None
+        """
+        if not FileUtils.dir_exists(dir_path):
+            try:
+                os.makedirs(dir_path, exist_ok=True)
+                FileUtils._logger.info(f"Created directory: {dir_path}")
+            except OSError as e:
+                FileUtils._logger.error(f"Failed to create directory {dir_path}: {e}")
+                raise OSError(f"Failed to create directory {dir_path}: {e}")
+        else:
+            FileUtils._logger.debug(f"Directory already exists: {dir_path}")
+
+    @staticmethod
+    def list_files(dir_path: str, pattern: str = "*") -> List[str]:
+        """
+        List all files in a directory matching a given pattern.
+
+        Args:
+            dir_path (str): Path to the directory.
+            pattern (str): Glob pattern to match files. Defaults to "*".
+
+        Returns:
+            List[str]: A list of file paths matching the given pattern.
+        """
+        search_pattern = os.path.join(dir_path, pattern)
+        files = glob.glob(search_pattern)
+        FileUtils._logger.debug(
+            f"Listing files in {dir_path} with pattern '{pattern}': Found {len(files)} files"
+        )
+        return files

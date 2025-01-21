@@ -1,7 +1,6 @@
-﻿# paths_loader.py
-
-import os
+﻿import os
 from dataclasses import dataclass, fields
+from pathlib import Path
 
 __all__ = ["PATHS"]  # Only expose PATHS for external use
 
@@ -9,31 +8,45 @@ __all__ = ["PATHS"]  # Only expose PATHS for external use
 @dataclass(frozen=True)
 class _PathsLoader:
     # Define your base directory for constructing full paths.
-    BASE_DIR = os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))))
-    )
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
-    # Define all other needed directories
-    SRC: str = "src"
-    LOGS: str = "src/logs"
-    DATA: str = "data"
-    RAW_DATA: str = "data/raw"
-    PROCESSED_DATA: str = "data/processed"
-    FEATURES: str = "data/output/features"
-    AVATARS_DATA: str = "data/processed/pedestrian_avatars"
-    RECONSTRUCTION_DATA: str = "data/processed/reconstruction"
-    PEDESTRIAN_FEATURES_DATA: str = "data/processed/pedestrian_features"
-    OUTPUT_DATA: str = "data/output"
+    # Define all base directories
+    SRC_PATH: Path = BASE_DIR / "src"
+    LOGS_PATH: Path = SRC_PATH / "logs"
+    CONFIG_PATH: Path = SRC_PATH / "config"
+    DATA_PATH: Path = BASE_DIR / "data"
+    CSV_DATA_PATH: Path = DATA_PATH / "csvs"
+    RAW_DATA_PATH: Path = DATA_PATH / "raw"
+    PROCESSED_DATA_PATH: Path = DATA_PATH / "processed"
+    OUTPUT_DATA_PATH: Path = DATA_PATH / "output"
+    SAMPLE_DATA_PATH: Path = DATA_PATH / "sample"
 
-    # Define all other needed files
-    CONFIG_FILE: str = "src/config/config.yaml"
-    LOG_FILE: str = "src/logs/log.log"
-    LOKI_CSV_PATH: str = "data/loki.csv"
-    BIN_LOKI_CSV_PATH: str = "data/bin_loki.csv"
-    BIN_FILTERED_PEDESTRIANS_CSV_PATH: str = "data/b_avatar_filtered_pedistrians.csv"
-    POINT_CLOUD_ATTENTION: str = "data/output/point_cloud_attention.json"
+    # Define all processed & output directories
+    FEATURES_PATH: Path = PROCESSED_DATA_PATH / "features"
+    ATTENTION_PATH: Path = PROCESSED_DATA_PATH / "attention"
+    PEDESTRIAN_AVATARS_PATH: Path = PROCESSED_DATA_PATH / "pedestrian_avatars"
+    RECONSTRUCTED_DATA_PATH: Path = PROCESSED_DATA_PATH / "reconstruction"
+    SAVED_PEDESTRIANS_PATH: Path = PROCESSED_DATA_PATH / "saved_pedestrians"
+    PEDESTRIAN_FEATURES_PATH: Path = FEATURES_PATH / "pedestrian_features"
+    PEDESTRIAN_AVATARS_FEATURES_PATH: Path = FEATURES_PATH / "pedestrian_avatars_features"
+    GROUP_WALKING_FEATURES_PATH: Path = FEATURES_PATH / "group_walking_features"
+    SPEED_DISTANCE_FEATURES_PATH: Path = FEATURES_PATH / "speed_distance"
+
+    # Define all base files
+    CONFIG_FILE: Path = CONFIG_PATH / "config.yaml"
+    LOG_FILE: Path = LOGS_PATH / "log.log"
+    LOKI_CSV_FILE: Path = CSV_DATA_PATH / "loki.csv"
+
+    # Define all processed & output files
+    BIN_LOKI_CSV_FILE: Path = CSV_DATA_PATH / "bin_loki.csv"
+    PEDESTRIAN_POINTCLOUDS_CSV_FILE: Path = CSV_DATA_PATH / "pedestrian_pointclouds.csv"
+    POINT_CLOUD_ATTENTION_JSON_FILE: Path = ATTENTION_PATH / "point_cloud_attenion.json"
+    AVATAR_FILTERED_PEDESTRIANS_CSV_FILE: Path = CSV_DATA_PATH / "avatar_filtered_pedistrians.csv"
+    BIN_AVATAR_FILTERED_PEDESTRIANS_CSV_FILE: Path = CSV_DATA_PATH / "bin_avatar_filtered_pedistrians.csv"
+    MERGED_FEATURES_JSON_FILE: Path = FEATURES_PATH / "merged_features.json"
+
+    BIN_FILTERED_PEDESTRIANS_CSV_PATH: Path = DATA_PATH / "b_avatar_filtered_pedistrians.csv"
+    POINT_CLOUD_ATTENTION: Path = OUTPUT_DATA_PATH / "pointcloud_attention.json"
 
     def __post_init__(self):
         # Ensure all necessary folders exist right after initialization.

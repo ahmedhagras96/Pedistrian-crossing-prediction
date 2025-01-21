@@ -320,3 +320,4 @@ pyrightconfig.json
 /data/raw
 *.url
 /.idea
+/data

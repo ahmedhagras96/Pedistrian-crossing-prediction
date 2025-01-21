@@ -8,5 +8,14 @@ model:
   validation_set_ratio: 0.2
 
 logging:
-  level: "DEBUG"
+  level: "INFO"
   format: "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
+  
+reconstruction:
+  frame_step: 2
+  frames_max_threshold: 100
+  tracked_objects: ('Car', 'Pedestrian')
+  voxel_size: 0.05
+  use_downsampling: False
+  point_size: 3.0
+  background_color: (0.2, 0.2, 0.2)

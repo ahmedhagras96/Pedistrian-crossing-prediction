@@ -23,9 +23,15 @@ class ColorFormatter(logging.Formatter):
         return f"{level_color}{message}{self.RESET_COLOR}"
 
 
-class LoggerUtils:
+class Logger:
     """
     Utility class for unified logging configuration and retrieval.
+    
+    Usage:
+            from pathlib import Path
+    
+            Logger.configure_unified_logging_file(PATHS.LOGS_PATH / Path("log_file.log"))
+            logger = Logger.get_logger("LogTitle")
     """
     _file_handler_configured = False
 
@@ -37,7 +43,7 @@ class LoggerUtils:
         Args:
             log_file (str): Path to the unified log file.
         """
-        if not LoggerUtils._file_handler_configured:
+        if not Logger._file_handler_configured:
             log_dir = os.path.dirname(log_file)
             if log_dir and not os.path.exists(log_dir):
                 os.makedirs(log_dir)
@@ -48,7 +54,7 @@ class LoggerUtils:
             file_handler.setFormatter(file_formatter)
             root_logger.addHandler(file_handler)
             root_logger.setLevel(ConfigLoader.get("logging.level"))
-            LoggerUtils._file_handler_configured = True
+            Logger._file_handler_configured = True
 
     @staticmethod
     def get_logger(name: str) -> logging.Logger:

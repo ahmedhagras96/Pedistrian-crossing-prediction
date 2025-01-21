@@ -1,9 +1,7 @@
 ﻿import os
 
 import yaml
-
 from modules.config.paths_loader import PATHS
-
 
 class ConfigLoader:
     """

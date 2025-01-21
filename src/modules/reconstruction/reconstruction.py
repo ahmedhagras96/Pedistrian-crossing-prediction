@@ -1,58 +1,98 @@
 ﻿import os
-import sys
+from pathlib import Path
 
-from OLDSRC.OLDmodules.utilities.logger import LoggerUtils
-from modules.reconstruction.modules.helpers.align_direction import AlignDirection
-from modules.reconstruction.modules.odometry_aligner import PointCloudOdometryAligner
-from modules.reconstruction.modules.pedestrian_map_aligner import PedestrianMapAligner
-from modules.reconstruction.modules.utils.visualization import PointCloudVisualizer
+from modules.config.logger import Logger
+from modules.config.paths_loader import PATHS
+from modules.reconstruction.aligners.align_direction import AlignDirection
+from modules.reconstruction.aligners.odometry_aligner import PointCloudOdometryAligner
+from modules.reconstruction.aligners.pedestrian_map_aligner import PedestrianMapAligner
+from modules.reconstruction.utilities.visualization import PointCloudVisualizer
 
-script_path = os.path.normpath(os.path.abspath(os.path.dirname(__file__)))
-loki_path = os.path.normpath(os.path.abspath(os.path.join(script_path, "..", "LOKI")))
-log_file = os.path.normpath(os.path.abspath(os.path.join(script_path, "logs", "logs.log")))
-logger = None
+#: Directory path containing raw data
+LOKI_PATH = PATHS.RAW_DATA_PATH
+
+#: CSV file path for Loki data
+LOKI_CSV_PATH = PATHS.LOKI_CSV_FILE
+
+#: Module-level logger for this script
+logger = Logger.get_logger("Reconstruction")
 
 
-def odometry_aligner_test():
-    logger.info('Running Odometry Aligner Test...')
+def run_odometry_aligner_pipeline() -> None:
+    """
+    Demonstrates how to use the PointCloudOdometryAligner to align environment and object point clouds
+    via odometry data. Logs informational messages and visualizes the results.
+
+    Raises:
+        RuntimeError: Propagates from PointCloudOdometryAligner or PointCloudVisualizer 
+            if alignment or visualization fails.
+    """
+    logger.info("Running Odometry Aligner Test...")
 
     odom_aligner = PointCloudOdometryAligner(
-        scenario_path=os.path.join(loki_path, 'scenario_000'),
-        loki_csv_path=os.path.join(loki_path, 'loki.csv'),
+        scenario_path=os.path.join(LOKI_PATH, 'scenario_000'),
+        loki_csv_path=LOKI_CSV_PATH,
     )
 
-    odometry_environment, odometry_objects = odom_aligner.align(20, 10, AlignDirection.SPLIT)
-    logger.info(f'Odometry Aligned Environment Point Cloud with {len(odometry_environment.points)} enviornment points')
-    logger.info(f'Odometry Aligned Objects Point Cloud with {len(odometry_objects.points)} objects points')
+    # Align the point clouds; adjust arguments as appropriate for your scenario
+    odometry_environment, odometry_objects = odom_aligner.align(
+        key_frame=20, align_interval=10, align_direction=AlignDirection.SPLIT
+    )
+
+    logger.info(
+        f"Odometry Aligned Environment Point Cloud has {len(odometry_environment.points)} points."
+    )
+    logger.info(
+        f"Odometry Aligned Objects Point Cloud has {len(odometry_objects.points)} points."
+    )
 
     # Visualize the aligned points
-    vis = PointCloudVisualizer()
-    vis.add_point_cloud(odometry_environment, [0.5, 0.5, 0.5])
-    vis.add_point_cloud(odometry_objects, color=[1, 0, 0])
-    vis.run()
-    vis.close()
+    visualizer = PointCloudVisualizer()
+    visualizer.add_point_cloud(odometry_environment, [0.5, 0.5, 0.5])  # Gray
+    visualizer.add_point_cloud(odometry_objects, color=[1.0, 0.0, 0.0])  # Red
+    visualizer.run()
+    visualizer.close()
 
 
-def pedestrian_map_aligner_test():
-    logger.info('Running Pedestrian Map Aligner Test...')
+def run_pedestrian_map_aligner_pipeline() -> None:
+    """
+    Demonstrates how to use the PedestrianMapAligner to align pedestrian point clouds 
+    and optionally save them to disk.
+
+    Raises:
+        RuntimeError: Propagates from PedestrianMapAligner if alignment or file saving fails.
+    """
+    logger.info("Running Pedestrian Map Aligner Test...")
 
     map_aligner = PedestrianMapAligner(
-        scenario_path=None,  # os.path.join(loki_path, 'scenario_026'),
-        loki_csv_path=os.path.join(loki_path, 'avatar_filtered_pedistrians.csv'),
-        data_path=loki_path
+        loki_csv_path=PATHS.AVATAR_FILTERED_PEDESTRIANS_CSV_FILE,
+        data_path=LOKI_PATH
     )
 
-    SavePath = os.path.join(loki_path, 'training_data/3d_constructed')
+    save_path = PATHS.RECONSTRUCTED_DATA_PATH
+    # Adjust arguments to align/save as needed for your scenario
+    map_aligner.align(
+        save=True,
+        use_downsampling=True,
+        save_path=save_path,
+        scaling_factor=20
+    )
 
-    map_aligner.align(save=True, use_downsampling=True, save_path=SavePath, scaling_factor=20)
 
-
-def main():
-    odometry_aligner_test()
-    # pedestrian_map_aligner_test()
+def main() -> None:
+    """
+    Runs all reconstruction tests in sequence.
+    
+    Raises:
+        RuntimeError: If either test function fails internally.
+    """
+    run_odometry_aligner_pipeline()
+    run_pedestrian_map_aligner_pipeline()
 
 
 if __name__ == '__main__':
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    logger = LoggerUtils.get_logger(__name__)
+    # Configure unified logging to write to a file
+    Logger.configure_unified_logging_file(PATHS.LOGS_PATH / Path("reconstruction.log"))
+
+    # Run the main entry point
     main()
