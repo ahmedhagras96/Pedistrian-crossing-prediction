@@ -11,3 +11,5 @@ if __name__ == "__main__":
     ConfigLoader.load_config(PATHS.CONFIG_FILE)
     Logger.configure_unified_logging_file(PATHS.LOGS_PATH / Path("main.log"))
     logger = Logger.get_logger("Main")
+    
+    # pipreqs . --encoding=utf-8-sig --force

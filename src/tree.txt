@@ -1,0 +1,144 @@
+├── config/
+│   ├── config.yaml
+├── logs/
+├── main.py
+├── modules/
+│   ├── attention/
+│   │   ├── pedestrian_attention/
+│   │   │   ├── output.py
+│   │   │   ├── pedestrian_attention_model.py
+│   │   │   ├── __init__.py
+│   │   ├── pointcloud_attention/
+│   │   │   ├── attention_model.py
+│   │   │   ├── layers/
+│   │   │   │   ├── centroid_aware_voxelization.py
+│   │   │   │   ├── kernel_generator.py
+│   │   │   │   ├── light_weight_self_attention.py
+│   │   │   │   ├── local_self_attention_base.py
+│   │   │   │   ├── __init__.py
+│   │   │   ├── output.py
+│   │   │   ├── __init__.py
+│   │   ├── __init__.py
+│   ├── avatar/
+│   │   ├── extraction/
+│   │   │   ├── avatar_extraction_pipeline.py
+│   │   │   ├── pedestrian_manager.py
+│   │   │   ├── scenario_validator.py
+│   │   │   ├── __init__.py
+│   │   ├── objects/
+│   │   │   ├── bounding_box.py
+│   │   │   ├── __init__.py
+│   │   ├── pedestrian_avatar_extractor_pipeline.py
+│   │   ├── processors/
+│   │   │   ├── pedestrian_processor.py
+│   │   │   ├── pointcloud_processor.py
+│   │   │   ├── __init__.py
+│   │   ├── utilities/
+│   │   │   ├── pointcloud_utils.py
+│   │   │   ├── visualizer.py
+│   │   │   ├── __init__.py
+│   │   ├── __init__.py
+│   ├── config/
+│   │   ├── configure_main.py
+│   │   ├── config_loader.py
+│   │   ├── logger.py
+│   │   ├── paths_loader.py
+│   │   ├── __init__.py
+│   ├── dataset/
+│   │   ├── loki_dataset.py
+│   │   ├── loki_dataset_handler.py
+│   │   ├── __init__.py
+│   ├── features/
+│   │   ├── attention_vectors/
+│   │   │   ├── features_attention_processor.py
+│   │   │   ├── features_merger.py
+│   │   │   ├── features_processing_pipeline.py
+│   │   │   ├── multi_head_attention.py
+│   │   │   ├── __init__.py
+│   │   ├── avatar/
+│   │   │   ├── avatar_feature_extraction.py
+│   │   │   ├── pedestrian_points_features/
+│   │   │   │   ├── feature_batch_extractor.py
+│   │   │   │   ├── pedestrian_feature_extractor.py
+│   │   │   │   ├── scenario_feature_extractor.py
+│   │   │   │   ├── utilities/
+│   │   │   │   │   ├── pedestrian_pointcloud_dataset.py
+│   │   │   │   │   ├── ply_processor.py
+│   │   │   │   │   ├── pointcloud_utils.py
+│   │   │   │   │   ├── scenario_saver.py
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   ├── __init__.py
+│   │   │   ├── __init__.py
+│   │   ├── features_extraction_pipeline.py
+│   │   ├── pedestrian_features/
+│   │   │   ├── extractors/
+│   │   │   │   ├── pedestrian_feature_extractor.py
+│   │   │   │   ├── scenario_feature_extractor.py
+│   │   │   │   ├── scenario_processor.py
+│   │   │   │   ├── __init__.py
+│   │   │   ├── features/
+│   │   │   │   ├── feature_saver.py
+│   │   │   │   ├── group_calculator.py
+│   │   │   │   ├── position_loader.py
+│   │   │   │   ├── speed_distance_processor.py
+│   │   │   │   ├── __init__.py
+│   │   │   ├── pedestrian_features_pipeline.py
+│   │   │   ├── __init__.py
+│   │   ├── preprocessing/
+│   │   │   ├── binary_intention_splitter.py
+│   │   │   ├── preprocessing_pipeline.py
+│   │   │   ├── __init__.py
+│   │   ├── utilities/
+│   │   │   ├── utils.py
+│   │   │   ├── __init__.py
+│   │   ├── __init__.py
+│   ├── model/
+│   │   ├── fusion_head/
+│   │   │   ├── attention_Base_fusion.py
+│   │   │   ├── base/
+│   │   │   │   ├── base_fusion_head.py
+│   │   │   │   ├── concatenation_fusion_head.py
+│   │   │   │   ├── linear_fusion_head.py
+│   │   │   │   ├── mixture_of_experts_fusion.py
+│   │   │   │   ├── __init__.py
+│   │   │   ├── __init__.py
+│   │   ├── loader/
+│   │   │   ├── data_loader.py
+│   │   │   ├── __init__.py
+│   │   ├── preproccessing.py
+│   │   ├── trainer.py
+│   │   ├── __init__.py
+│   ├── reconstruction/
+│   │   ├── aligners/
+│   │   │   ├── align_direction.py
+│   │   │   ├── base_aligner.py
+│   │   │   ├── odometry_aligner.py
+│   │   │   ├── odometry_validation.py
+│   │   │   ├── pedestrian_map_aligner.py
+│   │   │   ├── __init__.py
+│   │   ├── reconstruction.py
+│   │   ├── utilities/
+│   │   │   ├── file_utils.py
+│   │   │   ├── loki.py
+│   │   │   ├── pointcloud_utils.py
+│   │   │   ├── recon_3d_config.py
+│   │   │   ├── threaded_saving.py
+│   │   │   ├── visualization.py
+│   │   │   ├── __init__.py
+│   │   ├── __init__.py
+│   ├── __init__.py
+├── notebooks/
+│   ├── attention_vector/
+│   │   ├── feature_Vectors.ipynb
+│   │   ├── point_cloud_attention.ipynb
+│   ├── NOTEBOOKS.md
+│   ├── pedestrian_avatar/
+│   │   ├── Point_Cloud_Extraction.ipynb
+├── requirements.txt
+├── scripts/
+│   ├── script.py
+│   ├── source_path.py
+│   ├── temp.py
+│   ├── tree_structure.txt
+├── tree.txt
+├── __init__.py
