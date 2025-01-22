@@ -34,12 +34,12 @@ def load_point_cloud(file_path):
 
 def main():
     # Define paths
-    ply_file = "path_to_ply_file.ply"  # Replace with the actual .ply file path
-    output_file = "PointNet_Features.json"  # Replace with your desired output file path
+    ply_file = "path_to_ply_file.ply" 
+    output_file = "PointNet_Features.json"  
 
     # Load point cloud data
     points = load_point_cloud(ply_file)
-    points = points.unsqueeze(0)  # Add batch dimension, shape becomes [1, num_points, 3]
+    points = points.unsqueeze(0)   
 
     # Initialize PointNetFeatureExtractor
     model = PointNetFeatureExtractor(input_dim=3, output_dim=64)
