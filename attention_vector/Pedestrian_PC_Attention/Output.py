@@ -1,25 +1,45 @@
 import torch
 import json
+import os
 from attention_vector.Pedestrian_PC_Attention import PointNetFeatureExtractor
 from pathlib import Path
 import open3d as o3d
 import numpy as np
 
-# Save PointNet Features
-def save_pointnet_features(output, output_file):
+# Save Features by Scenario
+def save_features_by_scenario(features, output_directory):
     """
-    Save extracted PointNet features to a JSON file.
+    Save extracted features to individual JSON files for each scenario.
     Args:
-        output (torch.Tensor): Feature output tensor.
-        output_file (str): Path to save the output.
+        features (dict): Dictionary of pedestrian IDs (file names) and their extracted features.
+        output_directory (str): Path to the directory to save the scenario JSON files.
     """
-    output_data = {
-        "features": output.detach().cpu().numpy().tolist()
-    }
-    with open(output_file, 'w') as f:
-        json.dump(output_data, f, indent=4)
-    print(f"Features saved to {output_file}")
+    # Ensure output directory exists
+    os.makedirs(output_directory, exist_ok=True)
 
+    # Organize features by scenario
+    scenario_dict = {}
+    for file_name, feature_vector in features.items():
+        # Extract scenario identifier from file_name
+        base_name = os.path.basename(file_name)
+        scenario_id = base_name.split('_')[0]  # First part of the file name before '_'
+        frame_number = base_name.split('_')[1]  # Second part of the file name after '_'
+
+        # Initialize scenario entry if not already present
+        if scenario_id not in scenario_dict:
+            scenario_dict[scenario_id] = {}
+
+        # Store the frame's features
+        scenario_dict[scenario_id][f"frame_{frame_number}"] = feature_vector.tolist()
+
+    # Save each scenario's data into separate JSON files
+    for scenario_id, frames_data in scenario_dict.items():
+        output_file = os.path.join(output_directory, f'scenario_{scenario_id}.json')
+        with open(output_file, 'w') as json_file:
+            json.dump(frames_data, json_file, indent=4)
+        print(f"Scenario {scenario_id} features saved to {output_file}")
+
+# Load Point Cloud
 def load_point_cloud(file_path):
     """
     Load point cloud data from a .ply file.
@@ -34,25 +54,29 @@ def load_point_cloud(file_path):
 
 def main():
     # Define paths
-    ply_file = "path_to_ply_file.ply" 
-    output_file = "PointNet_Features.json"  
-
-    # Load point cloud data
-    points = load_point_cloud(ply_file)
-    points = points.unsqueeze(0)   
+    ply_folder = "path_to_ply_folder"  
+    output_directory = "path_to_output_directory"  
 
     # Initialize PointNetFeatureExtractor
     model = PointNetFeatureExtractor(input_dim=3, output_dim=64)
+    model.eval()  # Set model to evaluation mode
     print(sum(p.numel() for p in model.parameters()), "parameters")
 
-    # Forward pass
-    features = model(points)
+    # Dictionary to store features
+    features = {}
 
-    print("Features shape:", features.shape)
-    
-    # Save features to JSON
-    #save_pointnet_features(features, output_file)
+    # Process each .ply file in the folder
+    for ply_file in Path(ply_folder).glob("*.ply"):
+        points = load_point_cloud(str(ply_file))
+        points = points.unsqueeze(0)  # Add batch dimension, shape becomes [1, num_points, 3]
+
+        feature = model(points).squeeze(0)  # Remove batch dimension, shape becomes [output_dim]
+
+        # Store features with file name as the key
+        features[str(ply_file)] = feature.cpu().numpy()
+
+    # Save features organized by scenario
+    #save_features_by_scenario(features, output_directory)
 
 if __name__ == '__main__':
     main()
-
