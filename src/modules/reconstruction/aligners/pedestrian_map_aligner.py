@@ -198,9 +198,6 @@ class PedestrianMapAligner(BaseAligner):
             self.logger.warning(f"No pedestrian with id {ped_id} found in frame {frame}")
             return
 
-        # Transform the frame's base point cloud
-        pcd.transform(transformation_matrix)
-
         for _, obj_row in ped_objects.iterrows():
             # Extract bounding box data
             dimensions = [float(obj_row[col]) for col in obj_row.index[3:10]]
@@ -208,13 +205,19 @@ class PedestrianMapAligner(BaseAligner):
 
             yaw_matrix = PointCloudUtils.get_yaw_matrix(yaw)
             bounding_box_o3d = o3d.geometry.OrientedBoundingBox(center_box, yaw_matrix, [l, w, h])
+
+            # Exctract Pedestrian points from the point cloud 
+            points_ix = bounding_box_o3d.get_point_indices_within_bounding_box(pcd.points)
+            self.logger.info(f"Extracted {len(points_ix)} points for pedestrian {ped_id} in frame {frame}")
+            obj_ply = pcd.select_by_index(points_ix)
+
+            # Apply transformation on the pedestrian point cloud
+            obj_ply.transform(transformation_matrix)
+
+            # Scale, translate, and rotate the bounding box
             scaled_box = bounding_box_o3d.scale(scaling_factor, bounding_box_o3d.get_center())
             scaled_box.translate(translation)
             scaled_box.rotate(rotation)
-
-            # Pedestrian point cloud (already transformed above)
-            points_ix = bounding_box_o3d.get_point_indices_within_bounding_box(pcd.points)
-            obj_ply = pcd.select_by_index(points_ix)
 
             # If this label is a pedestrian, gather car data
             if obj_row['labels'] == 'Pedestrian':
