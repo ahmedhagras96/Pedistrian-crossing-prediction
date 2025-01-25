@@ -64,7 +64,6 @@ class PedestrianProcessor:
 
         # Filter to include only pedestrians
         df_pedestrians = df_labels3d[df_labels3d['labels'] == 'Pedestrian'].reset_index(drop=True)
-        # print("df_pedestrians: ",df_pedestrians)
 
         #filter pedistrians according to existence in loki.csv file 
         if df_pedestrians.empty:
@@ -126,7 +125,7 @@ class PedestrianProcessor:
 
         for (idx, ped_data), pcd_ped in zip(df_pedestrians.iterrows(), pedestrian_pcds):
             point_count = len(pcd_ped.points)
-            if point_count >= min_threshold:
+            if point_count >= min_threshold and point_count > 3:
                 pedestrian_pcds_filtered.append(pcd_ped)
                 df_pedestrians_filtered = pd.concat([df_pedestrians_filtered, ped_data.to_frame().T], ignore_index=True)
             else:
@@ -742,6 +741,7 @@ class PedestrianProcessingPipeline:
                 # Retrieve sample
                 raw_pcd, labels3d_ndarray = self.get_pcd_and_labels(scenario_id, frame_id)
                 if raw_pcd is None or labels3d_ndarray is None:
+                    print(f"there are no row point cloud data or label3d file for frame {frame_id} in {scenario_id}")
                     continue
 
                 # Preprocess Point Cloud
@@ -750,19 +750,19 @@ class PedestrianProcessingPipeline:
 
                 # Extract Pedestrian DataFrame 
                 df_pedestrians = self.pedestrian_processor.extract_pedestrian_df(labels3d_ndarray)
-
+                
                 #filter the return dataframe according if the pedistrian exist in loki.csv or not
                 df_loki = pd.read_csv(self.csv_path)  # DataFrame for loki.csv
-                filtered_pedestrians = df_pedestrians[df_pedestrians['track_id'].isin(df_loki['Ped_ID'])]
+                df_pedestrians_filtered = df_pedestrians[df_pedestrians['track_id'].isin(df_loki['Ped_ID'])]
 
-                print(f"Extracted {len(filtered_pedestrians)} pedestrians in Scenario: {scenario_id}, Frame: {frame_id}")
+                print(f"Extracted {len(df_pedestrians_filtered)} pedestrians in Scenario: {scenario_id}, Frame: {frame_id}")
 
-                if df_pedestrians.empty:
+                if df_pedestrians_filtered.empty:
                     print(f"No pedestrians found in Scenario: {scenario_id}, Frame: {frame_id}.")
                     continue
                     
                 # Extract Pedestrian Point Clouds
-                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, filtered_pedestrians)
+                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, df_pedestrians_filtered)
                 print(f"Extracted {len(pedestrian_pcds)} pedestrian point clouds.")
 
                 if not pedestrian_pcds:
@@ -777,7 +777,7 @@ class PedestrianProcessingPipeline:
 
                 # Filter Pedestrians Based on Threshold
                 df_pedestrians_filtered, pedestrian_pcds_filtered = self.pedestrian_processor.filter_pedestrians(
-                    df_pedestrians, pedestrian_pcds, min_threshold
+                    df_pedestrians_filtered, pedestrian_pcds, min_threshold
                 )
 
                 # Recenter and prepare pedestrian PCDs
@@ -786,7 +786,7 @@ class PedestrianProcessingPipeline:
                 )
                 print(f"Prepared pedestrian PCD dictionary for Scenario: {scenario_id}, Frame: {frame_id}")
 
-                if df_pedestrians.empty == False:
+                if df_pedestrians_filtered.empty == False:
                     df_pedestrians_filtered['scenario_id'] = scenario_id
                     df_pedestrians_filtered['frame_id'] = frame_id
                     df_ped_filt_cols = df_pedestrians_filtered[['track_id', 'scenario_id', 'frame_id', 'intended_actions']]
