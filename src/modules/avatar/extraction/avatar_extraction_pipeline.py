@@ -111,6 +111,7 @@ class AvatarExtractionPipeline:
                 # Retrieve sample
                 raw_pcd, labels3d_ndarray = self._get_pcd_and_labels(scenario_id, frame_id)
                 if raw_pcd is None or labels3d_ndarray is None:
+                    self.logger.warning(f"Could not find point cloud data or 3d labels for Scenario: {scenario_id}, Frame: {frame_id}")
                     continue
 
                 # Preprocess Point Cloud
@@ -122,17 +123,17 @@ class AvatarExtractionPipeline:
 
                 # Filter pedestrians using the CSV
                 df_loki = pd.read_csv(self.csv_path)
-                filtered_pedestrians = df_pedestrians[df_pedestrians['track_id'].isin(df_loki['Ped_ID'])]
+                df_pedestrians_filtered = df_pedestrians[df_pedestrians['track_id'].isin(df_loki['Ped_ID'])]
 
-                self.logger.info(f"Extracted {len(filtered_pedestrians)} pedestrian(s) in "
+                self.logger.info(f"Extracted {len(df_pedestrians_filtered)} pedestrian(s) in "
                                  f"Scenario: {scenario_id}, Frame: {frame_id}")
 
-                if df_pedestrians.empty:
+                if df_pedestrians_filtered.empty:
                     self.logger.warning(f"No pedestrians found in Scenario: {scenario_id}, Frame: {frame_id}")
                     continue
 
                 # Extract Pedestrian Point Clouds
-                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, filtered_pedestrians)
+                pedestrian_pcds = self.visualizer.extract_pedestrian_pcds(cleaned_pcd, df_pedestrians_filtered)
                 self.logger.info(f"Extracted {len(pedestrian_pcds)} pedestrian point cloud(s).")
 
                 if not pedestrian_pcds:
@@ -144,7 +145,7 @@ class AvatarExtractionPipeline:
                 min_threshold = self.pedestrian_processor.set_min_point_threshold(avg_points)
 
                 df_pedestrians_filtered, pedestrian_pcds_filtered = self.pedestrian_processor.filter_pedestrians(
-                    df_pedestrians, pedestrian_pcds, min_threshold
+                    df_pedestrians_filtered, pedestrian_pcds, min_threshold
                 )
 
                 # Prepare pedestrian PCDs
@@ -156,7 +157,7 @@ class AvatarExtractionPipeline:
                 )
 
                 # Optionally track metadata
-                if not df_pedestrians.empty:
+                if not df_pedestrians_filtered.empty:
                     df_pedestrians_filtered['scenario_id'] = scenario_id
                     df_pedestrians_filtered['frame_id'] = frame_id
                     df_ped_filtered_cols = df_pedestrians_filtered[

@@ -114,7 +114,7 @@ class PedestrianProcessor:
 
         for (idx, ped_data), pcd_ped in zip(df_pedestrians.iterrows(), pedestrian_pcds):
             point_count = len(pcd_ped.points)
-            if point_count >= min_threshold:
+            if point_count >= min_threshold and point_count > 3:
                 pedestrian_pcds_filtered.append(pcd_ped)
                 df_pedestrians_filtered = pd.concat(
                     [df_pedestrians_filtered, ped_data.to_frame().T],
