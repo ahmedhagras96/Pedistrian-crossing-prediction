@@ -95,8 +95,9 @@ class PedestrianPointCloudDataset(Dataset):
                 data = json.load(f)
                 features.append([data["speed"], data["distance"]])
 
-        features = pd.DataFrame(features, columns=["speed", "distance"])
+        features = np.array(features)
         self.scaler.fit(features)
+
     
     def __len__(self):
         return len(self.pedestrian_ids)
@@ -121,7 +122,9 @@ class PedestrianPointCloudDataset(Dataset):
         label = self.labels[pedestrian_id]
 
         # Normalize speed and distance
-        speed, distance = self.scaler.transform([[features["speed"], features["distance"]]])[0]
+        speed, distance = self.scaler.transform(
+            np.array([[features["speed"], features["distance"]]])
+        )[0]
         movement_status = 1 if features["movement_status"] == 1 else 0  # Binary value: 0 or 1
 
         pedestrian_features = torch.tensor(
