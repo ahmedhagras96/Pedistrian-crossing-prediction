@@ -9,7 +9,9 @@
 /3D_construction/output_directory
 
 __pycache__
-
+.env
+.vscode
+Pedistrian-crossing-prediction.code-workspace
 debugging
 modified_label3d_files
 processed_scenarios
