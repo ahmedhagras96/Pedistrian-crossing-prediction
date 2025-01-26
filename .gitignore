@@ -324,3 +324,4 @@ pyrightconfig.json
 *.code-workspace
 /docs/instructions
 /data/processed
+/data
