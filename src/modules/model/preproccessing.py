@@ -20,7 +20,7 @@ class PreprocessingPipelineRunner:
     """
 
     THRESHOLD_MULTIPLIER = 0.5
-    DATA_PATH = PATHS.SAMPLE_DATA_PATH
+    DATA_PATH = PATHS.RAW_DATA_PATH
 
     def __init__(self):
         # Configure logger

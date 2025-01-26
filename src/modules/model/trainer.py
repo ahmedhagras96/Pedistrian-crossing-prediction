@@ -90,6 +90,14 @@ class FusionTrainer:
         self.optimizer = torch.optim.Adam(params=parameters, lr=self.learning_rate)
 
         logger.info('Number of parameters in AttentionFusionHead: %d', sum(p.numel() for p in self.model.parameters()))
+        logger.info(f"Training batches: {len(self.train_dl)}")
+        logger.info(f"Validation batches: {len(self.val_dl)}")
+        logger.info(f"Test batches: {len(self.test_dl)}")
+
+        if len(self.train_dl) == 0:
+            raise ValueError("Training data loader is empty. Check data paths or splitting ratios.")
+        if len(self.val_dl) == 0:
+            raise ValueError("Validation data loader is empty.")
 
         # Report for logging training progress
         self.report = Report(self.n_epochs)
@@ -105,60 +113,56 @@ class FusionTrainer:
         out, _ = self.features_attention_model(batch)
         return out
 
-    def train_batch(self):
-        self.model.train()
-        total_loss = 0.0
-        for batch in self.train_dl:
-            batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features, target = batch
+    def train_batch(self, batch):
+        self.optimizer.zero_grad()
+        batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features, target = batch
 
-            source1 = self.extract_3d_attention_vectors(batched_reconstructed_environment)
-            source2 = self.extract_pedestrian_cloud_attention_vectors(batched_avatar_points)
-            source3 = self.extract_pedestrian_features_attention_vectors(batched_pedestrian_features)
+        source1 = self.extract_3d_attention_vectors(batched_reconstructed_environment)
+        source2 = self.extract_pedestrian_cloud_attention_vectors(batched_avatar_points)
+        source3 = self.extract_pedestrian_features_attention_vectors(batched_pedestrian_features)
 
-            outputs = self.model(source1, source2, source3)
-            loss = self.criterion(outputs, target)
-
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-
-            total_loss += loss.item()
-        return total_loss / len(self.train_dl)
+        outputs = self.model(source1, source2, source3)
+        loss = self.criterion(outputs, target)
+        loss.backward()
+        self.optimizer.step()
+        return loss.item()
 
     @torch.no_grad()
-    def val_batch(self):
-        self.model.eval()
-        total_loss = 0.0
-        for batch in self.val_dl:
-            batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features, target = batch
+    def val_batch(self, batch):
+        batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features, target = batch
 
-            source1 = self.extract_3d_attention_vectors(batched_reconstructed_environment)
-            source2 = self.extract_pedestrian_cloud_attention_vectors(batched_avatar_points)
-            source3 = self.extract_pedestrian_features_attention_vectors(batched_pedestrian_features)
+        source1 = self.extract_3d_attention_vectors(batched_reconstructed_environment)
+        source2 = self.extract_pedestrian_cloud_attention_vectors(batched_avatar_points)
+        source3 = self.extract_pedestrian_features_attention_vectors(batched_pedestrian_features)
 
-            outputs = self.model(source1, source2, source3)
-            loss = self.criterion(outputs, target)
-
-            total_loss += loss.item()
-        return total_loss / len(self.val_dl)
+        outputs = self.model(source1, source2, source3)
+        loss = self.criterion(outputs, target)
+        return loss.item()
 
     def run_training(self):
         for epoch in range(self.n_epochs):
-            N_train = len(self.train_dl)
             # Training loop
-            for ix, _ in enumerate(self.train_dl):
-                avg_loss = self.train_batch()
-                self.report.record(epoch + (ix + 1) / N_train, trn_loss=avg_loss, end='\r')
+            self.model.train()
+            total_trn_loss = 0.0
+            for batch in self.train_dl:
+                loss = self.train_batch(batch)
+                total_trn_loss += loss
+
+            avg_trn_loss = total_trn_loss / len(self.train_dl)
+            self.report.record(epoch + 1, trn_loss=avg_trn_loss)
 
             # Validation loop
-            val_loss = 0.0
-            N_val = len(self.val_dl)
-            for ix, _ in enumerate(self.val_dl):
-                loss = self.val_batch()
-                val_loss += loss
-                self.report.record(epoch + (ix + 1) / N_val, val_loss=loss, end='\r')
+            self.model.eval()
+            total_val_loss = 0.0
+            for batch in self.val_dl:
+                loss = self.val_batch(batch)
+                total_val_loss += loss
+
+            avg_val_loss = total_val_loss / len(self.val_dl)
+            self.report.record(epoch + 1, val_loss=avg_val_loss)
 
             self.report.report_avgs(epoch + 1)
+
         self.report.plot_epochs(['trn_loss', 'val_loss'])
 
 

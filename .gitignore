@@ -324,3 +324,7 @@ pyrightconfig.json
 *.url
 /.idea
 /data
+*.code-workspace
+/docs/instructions
+/data/processed
+/data
