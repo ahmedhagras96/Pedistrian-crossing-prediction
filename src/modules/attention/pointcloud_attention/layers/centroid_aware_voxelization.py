@@ -1,36 +1,42 @@
-import numpy as np
-import open3d as o3d
 import torch
 import torch.nn as nn
+import open3d.ml.torch as o3dml
 
 from modules.config.logger import Logger
 
-
 class CentroidAwareVoxelization(nn.Module):
     """
-    A module that voxelizes point cloud data and computes a feature representation 
-    centered around voxel centroids. The class uses separate MLPs for positional 
-    encoding and feature extraction.
+    Centroid-aware voxelization for point cloud data, integrating voxel pooling,
+    normalization, and sparse feature representation.
+
+    This module performs:
+    1. **Voxelization** of point clouds.
+    2. **Feature pooling** within voxels.
+    3. **Normalization** using voxel centroids.
+    4. **Sparse tensor representation** for efficient processing.
     """
 
-    def __init__(self, embed_dim: int):
+    def __init__(self, embed_dim: int, max_voxel_grid_size: int = int(1e5)):
         """
-        Initialize the centroid-aware voxelization module.
+        Initializes the CentroidAwareVoxelization module.
 
         Args:
             embed_dim (int):
-                Dimensionality of the embedding space for positional encoding
-                and subsequent feature extraction.
+                The embedding dimension for learned features.
+            max_voxel_grid_size (int, optional):
+                Maximum voxel grid size for sparse tensor representation. Defaults to `int(1e5)`.
         """
         super().__init__()
+
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(
             f"Initializing {self.__class__.__name__} with embed_dim={embed_dim}"
         )
 
         self.embed_dim = embed_dim
+        self.max_voxel_grid_size = max_voxel_grid_size
 
-        # Shared positional embedding MLP
+        # Positional encoding MLP
         self.pos_enc_mlp = nn.Sequential(
             nn.Linear(3, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
@@ -40,150 +46,154 @@ class CentroidAwareVoxelization(nn.Module):
             nn.GELU(),
         )
 
-        # Voxel feature generator MLP
+        # Feature aggregation MLP
         self.feature_mlp = nn.Sequential(
-            nn.Linear(embed_dim + 3, embed_dim, bias=False),
+            nn.Linear(embed_dim + 6, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
             nn.GELU(),
             nn.Linear(embed_dim, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
             nn.GELU(),
         )
-
         # self.logger.debug(f"{self.__class__.__name__} successfully initialized.")
+
+    @staticmethod
+    def pad_tensor(tensor: torch.Tensor, target_size: int, shape: tuple, fill_value=0, device="cpu"):
+        """
+        Pads a tensor to match the target size.
+
+        Args:
+            tensor (torch.Tensor): Input tensor to be padded.
+            target_size (int): The target number of elements in dimension 0.
+            shape (tuple): The shape of each element (excluding batch size).
+            fill_value (int, optional): Value used for padding. Defaults to 0.
+            device (str, optional): Device to place the padded tensor. Defaults to "cpu".
+
+        Returns:
+            torch.Tensor: Padded tensor of shape `(target_size, *shape)`.
+        """
+        pad_size = target_size - tensor.shape[0]
+        if pad_size > 0:
+            padding = torch.full((pad_size, *shape), fill_value, dtype=tensor.dtype, device=device)
+            return torch.cat([tensor, padding], dim=0)
+        return tensor
 
     def forward(self, points: torch.Tensor, voxel_size: float = 0.05):
         """
-        Voxelizes the input point clouds, computes centroids and normalized positions,
-        and aggregates features within each voxel.
+        Forward pass for centroid-aware voxelization.
 
         Args:
-            points (torch.Tensor):
-                Tensor of shape (B, N, 3) representing point coordinates,
-                where B is the batch size and N is the number of points per batch.
-            voxel_size (float, optional):
-                Size of the voxel grid. Defaults to 0.05.
+            points (torch.Tensor): 
+                Input point cloud of shape `(B, N, 3)`, where:
+                - `B`: Batch size
+                - `N`: Number of points per batch
+                - `3`: (x, y, z) coordinates
+                
+            voxel_size (float, optional): 
+                The size of each voxel. Defaults to 0.05.
 
         Returns:
-            padded_aggregated_features (torch.Tensor):
-                Padded features of shape (B, max_voxels, embed_dim).
-            padded_norm_points (torch.Tensor):
-                Padded normalized points of shape (B, max_voxels, 3).
-            voxel_centroids (torch.Tensor):
-                Centroids of each voxel. Shape: (num_unique_voxels, 3).
-            voxel_counts (torch.Tensor):
-                Number of points per voxel. Shape: (num_unique_voxels,).
-            pos_embs (torch.Tensor):
-                Positional embeddings for the points. Shape: (B*N, embed_dim).
-            batch_ids (torch.Tensor):
-                Batch indices for each point, reshaped to (B, N).
+            tuple: 
+                - **sparse_features** (torch.sparse.Tensor): Sparse representation of voxelized features.
+                - **norm_points** (torch.Tensor): Normalized points.
+                - **voxel_centroids** (torch.Tensor): Centroids of voxels.
+                - **voxel_counts** (torch.Tensor): Number of points per voxel.
+                - **pos_embs** (torch.Tensor): Encoded positional embeddings.
         """
+
         # self.logger.debug(
         #     f"Forward called with points of shape {points.shape}, voxel_size={voxel_size}"
         # )
-
+        
         batch_size, num_points, _ = points.shape
         device = points.device
 
-        # 1) Flatten the batch dimension
-        # ------------------------------
-        flat_points = points.view(-1, 3)  # (B*N, 3)
-        batch_ids = torch.arange(batch_size, device=device).repeat_interleave(num_points)
+        # 🔹 **Flatten points and prepare row_splits**
+        flat_points = points.view(-1, 3)
+        row_splits = torch.arange(0, (batch_size + 1) * num_points, num_points, device=device, dtype=torch.int64)
 
-        # 2) Convert to Open3D PointCloud and create a voxel grid
-        # -------------------------------------------------------
-        point_cloud = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(flat_points.cpu().numpy()))
-        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(point_cloud, voxel_size)
+        # 🔹 **Compute spatial range**
+        points_range_min = flat_points.min(dim=0).values
+        points_range_max = flat_points.max(dim=0).values
 
-        # 3) Determine voxel indices for each point
-        # -----------------------------------------
-        flat_voxel_indices = np.array(
-            [voxel_grid.get_voxel(p.cpu().numpy()) for p in flat_points]
+        # 🔹 **Voxelization**
+        voxel_coords, voxel_point_indices, voxel_point_row_splits, voxel_batch_splits = o3dml.ops.voxelize(
+            points=flat_points,
+            row_splits=row_splits,
+            voxel_size=torch.tensor([voxel_size] * 3, device=device),
+            points_range_min=points_range_min,
+            points_range_max=points_range_max,
+            max_points_per_voxel=1000
         )
-        flat_voxel_indices = torch.tensor(flat_voxel_indices, dtype=torch.int32, device=device)
 
-        # Combine batch IDs with voxel indices for uniqueness across the batch dimension
-        combined_indices = torch.cat([batch_ids.unsqueeze(1), flat_voxel_indices], dim=1)  # (B*N, 4)
+        # 🔹 **Compute unique voxel indices per batch**
+        batch_indices = torch.repeat_interleave(
+            torch.arange(batch_size, device=device),
+            voxel_batch_splits[1:] - voxel_batch_splits[:-1]
+        ).unsqueeze(1)
 
-        # Group points by voxel
-        unique_voxels, inverse_indices = torch.unique(combined_indices, dim=0, return_inverse=True)
-        voxel_counts = torch.bincount(inverse_indices)
-
+        unique_voxels = torch.cat([batch_indices, voxel_coords], dim=1)  # Shape: (num_voxels, 4)
+       
         # self.logger.debug(
         #     f"Number of unique voxels: {unique_voxels.shape[0]}. "
         #     f"Total points: {flat_points.shape[0]}"
-        # )
-
-        # 4) Compute centroids for each voxel
-        # -----------------------------------
-        voxel_sums = torch.zeros(
-            (unique_voxels.shape[0], 3), device=device
-        ).index_add_(0, inverse_indices, flat_points)
-        voxel_centroids = voxel_sums / voxel_counts.unsqueeze(1)  # (num_unique_voxels, 3)
-
-        # 5) Normalize points relative to voxel centroids
-        # ----------------------------------------------
-        norm_points = flat_points - voxel_centroids[inverse_indices]
-
-        # 6) Compute positional embeddings
-        # --------------------------------
-        pos_embs = self.pos_enc_mlp(norm_points)  # (B*N, embed_dim)
-
-        # 7) Concatenate original coordinates with positional embeddings
-        # --------------------------------------------------------------
-        input_features = flat_points  # (B*N, 3)
-        concat_features = torch.cat([input_features, pos_embs], dim=1)  # (B*N, embed_dim + 3)
-
-        # 8) Aggregate features per voxel (average pooling)
-        # -------------------------------------------------
-        aggregated_features = torch.zeros(
-            (unique_voxels.shape[0], concat_features.shape[1]), device=device
-        ).index_add_(0, inverse_indices, concat_features)
-        aggregated_features /= voxel_counts.unsqueeze(1)
-        aggregated_features = self.feature_mlp(aggregated_features)  # (num_unique_voxels, embed_dim)
-
-        # 9) Pad each batch to the maximum number of voxels
-        # -------------------------------------------------
-        max_voxels = batch_ids.bincount().max().item()
-        padded_aggregated_features = torch.zeros(
-            (batch_size, max_voxels, aggregated_features.size(1)),
-            device=device, dtype=aggregated_features.dtype
-        )
-        padded_norm_points = torch.zeros(
-            (batch_size, max_voxels, 3),
-            device=device, dtype=norm_points.dtype
+        # )            
+       
+        # 🔹 **Voxel pooling**
+        voxel_avg_positions, pooled_features = o3dml.ops.voxel_pooling(
+            positions=flat_points,
+            features=flat_points,
+            voxel_size=voxel_size,
+            position_fn='average',
+            feature_fn='average'
         )
 
-        for b in range(batch_size):
-            batch_voxel_mask = unique_voxels[:, 0] == b  # Identify voxels belonging to batch b
-            batch_voxels = torch.where(batch_voxel_mask)[0]
-            num_voxels = len(batch_voxels)
+        # 🔹 **Compute voxel point counts**
+        voxel_counts = (voxel_point_row_splits[1:] - voxel_point_row_splits[:-1]).unsqueeze(1).float()
 
-            # Identify points belonging to batch b
-            batch_points_mask = batch_ids == b
+        # 🔹 **Handle tensor mismatch issues**
+        min_voxels = min(voxel_avg_positions.shape[0], voxel_counts.shape[0])
+        target_size = batch_size * num_points
 
-            # Extract aggregated features and normalized points
-            batch_aggregated_features = aggregated_features[batch_voxels]
-            batch_norm_points = norm_points[batch_points_mask]
+        voxel_avg_positions = self.pad_tensor(voxel_avg_positions[:min_voxels], target_size, (3,), device=device)
+        voxel_counts = self.pad_tensor(voxel_counts[:min_voxels], target_size, (1,), device=device)
+        pooled_features = self.pad_tensor(pooled_features[:min_voxels], target_size, (3,), device=device)
+        unique_voxels = self.pad_tensor(unique_voxels[:min_voxels], target_size, (4,), fill_value=-1, device=device)
+        voxel_point_indices = self.pad_tensor(voxel_point_indices[:min_voxels], target_size, (), fill_value=-1, device=device)
+        flat_points = self.pad_tensor(flat_points[:min_voxels], target_size, (3,), device=device)
 
-            # Pad
-            padded_aggregated_features[b, :num_voxels] = batch_aggregated_features
-            padded_norm_points[b, :num_voxels] = batch_norm_points[:num_voxels]
+        # 🔹 **Compute voxel centroids**
+        voxel_sums = voxel_avg_positions * voxel_counts
+        voxel_centroids = voxel_sums / (voxel_counts + 1e-6)
 
+        # Ensure voxel_point_indices is within valid range
+        voxel_point_indices = voxel_point_indices.clamp(0, voxel_centroids.shape[0] - 1)
+
+        #🔹 **Normalize points**
+        norm_points = flat_points - voxel_centroids[voxel_point_indices]
+
+        # 🔹 **Feature aggregation**
+        pos_embs = self.pos_enc_mlp(norm_points)
+        concat_features = torch.cat([flat_points, pos_embs, pooled_features], dim=1)
+        aggregated_features = self.feature_mlp(concat_features)
+
+        # 🔹 **Sparse tensor conversion**
+        transposed_unique_voxels = unique_voxels.permute(1, 0)
+        sparse_features = torch.sparse_coo_tensor(
+            indices=transposed_unique_voxels,
+            values=aggregated_features,
+            size=(batch_size, self.max_voxel_grid_size, self.max_voxel_grid_size, self.max_voxel_grid_size, self.embed_dim),
+            device=device, 
+            requires_grad=True
+        )
+        
         # self.logger.debug(
-        #     f"Finished voxelization and feature aggregation. "
-        #     f"Output shapes: padded_aggregated_features={padded_aggregated_features.shape}, "
-        #     f"padded_norm_points={padded_norm_points.shape}"
-        # )
-
-        # Reshape batch_ids back to (B, N) for downstream usage
-        batch_ids_reshaped = batch_ids.view(batch_size, -1)
-
+        #     f"Finished voxelization and feature aggregation. ")
+   
         return (
-            padded_aggregated_features,
-            padded_norm_points,
+            sparse_features,
+            norm_points,
             voxel_centroids,
             voxel_counts,
             pos_embs,
-            batch_ids_reshaped
         )

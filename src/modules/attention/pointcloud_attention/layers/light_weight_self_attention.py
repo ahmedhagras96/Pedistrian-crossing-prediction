@@ -5,28 +5,26 @@ import torch.nn.functional as F
 from modules.attention.pointcloud_attention.layers.local_self_attention_base import LocalSelfAttentionBase
 from modules.config.logger import Logger
 
-
 class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
     """
-    A lightweight self-attention layer for point cloud data, operating in 3D space.
-    Inherits from LocalSelfAttentionBase for kernel-based neighborhood computations.
-    It applies both absolute (intra) and relative (inter) positional encodings, then
-    performs multi-head attention using a cosine-similarity-based approach.
+    A lightweight self-attention layer for sparse point cloud data, operating in 3D space.
+    This layer processes sparse tensors efficiently by leveraging kernel-based neighborhood computations.
+
+    Inherits from `LocalSelfAttentionBase` for kernel operations.
     """
 
-    def __init__(self, in_channels, out_channels=None, kernel_size=3, num_heads=4):
+    def __init__(self, in_channels: int, out_channels: int = None, kernel_size: int = 3, num_heads: int = 4):
         """
-        Initialize the LightweightSelfAttentionLayer.
+        Initializes the LightweightSelfAttentionLayer.
 
         Args:
-            in_channels (int):
+            in_channels (int): 
                 Number of input feature channels per point.
-            out_channels (int, optional):
-                Number of output feature channels after attention. If None,
-                set to in_channels. Must be divisible by num_heads.
-            kernel_size (int or tuple, optional):
-                Size of the kernel used in neighborhood mapping. Defaults to 3.
-            num_heads (int, optional):
+            out_channels (int, optional): 
+                Number of output feature channels after attention. Defaults to in_channels.
+            kernel_size (int, optional): 
+                Size of the local attention kernel. Defaults to 3.
+            num_heads (int, optional): 
                 Number of attention heads. Defaults to 4.
         """
         super().__init__(kernel_size=kernel_size, dimension=3)
@@ -40,16 +38,16 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         out_channels = in_channels if out_channels is None else out_channels
         assert out_channels % num_heads == 0, "out_channels must be divisible by num_heads"
 
-        # Store parameters
+        # Store layer parameters
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.num_heads = num_heads
         self.attn_channels = out_channels // num_heads
 
-        # Linear layers to project input features to query/value and then back out
-        self.to_query = nn.Linear(in_channels, out_channels)
-        self.to_value = nn.Linear(in_channels, out_channels)
-        self.to_out = nn.Linear(out_channels, out_channels)
+        # Linear transformations for queries, values, and output
+        self.to_query = nn.Linear(in_channels, out_channels, bias=False)
+        self.to_value = nn.Linear(in_channels, out_channels, bias=False)
+        self.to_out = nn.Linear(out_channels, out_channels, bias=False)
 
         # Absolute (intra) positional encoding
         self.intra_pos_mlp = nn.Sequential(
@@ -59,7 +57,7 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
             nn.Linear(3, in_channels, bias=False),
             nn.BatchNorm1d(in_channels),
             nn.ReLU(inplace=True),
-            nn.Linear(in_channels, in_channels)
+            nn.Linear(in_channels, in_channels, bias=False),
         )
 
         # Relative (inter) positional encoding
@@ -68,104 +66,91 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         )
         nn.init.normal_(self.inter_pos_enc, mean=0.0, std=1.0)
 
-        # Max pooling for global aggregation
+        # Global feature aggregation using adaptive max pooling
         self.max_pool = nn.AdaptiveMaxPool1d(1)
 
-        # self.logger.debug(f"{self.__class__.__name__} successfully initialized.")
-
-    def forward(self, x: torch.Tensor, norm_points: torch.Tensor, batch_indices: torch.Tensor):
+    def forward(self, sparse_x: torch.sparse_coo_tensor, norm_points: torch.Tensor):
         """
-        Forward pass for lightweight self-attention on point cloud data.
+        Forward pass for lightweight self-attention on sparse point cloud data.
 
         Args:
-            x (torch.Tensor):
-                Input feature tensor of shape [B, N, C], where B is batch size,
-                N is number of points, and C is number of input channels.
-            norm_points (torch.Tensor):
-                Normalized point coordinates of shape [B, N, 3]. Used for both
-                absolute and relative positional encodings.
-            batch_indices (torch.Tensor):
-                Tensor of shape [B, N] (or possibly flattened [B*N]) indicating the
-                batch index for each point.
+            sparse_x (torch.sparse_coo_tensor): 
+                Sparse input feature tensor.
+            norm_points (torch.Tensor): 
+                Normalized point coordinates of shape `[B, N, 3]`.
 
         Returns:
-            out (torch.Tensor):
-                Aggregated output of shape [B, out_channels], after pooling.
-            attn (torch.Tensor):
-                Attention map of shape [B, M, num_heads], where M is the number of
-                unique output coordinates from the kernel mapping process.
+            tuple:
+                - **out** (torch.Tensor): Aggregated output features of shape `[B, out_channels]`.
+                - **attn** (torch.Tensor): Attention map of shape `[B, M, num_heads]`.
         """
-        B, N, C = x.shape
-        # self.logger.debug(f"Forward called with x of shape {x.shape}, "
-        #                   f"norm_points of shape {norm_points.shape}, "
-        #                   f"batch_indices of shape {batch_indices.shape}.")
+        # Extract sparse tensor components
+        sparse_indices = sparse_x.indices()  # Shape: (4, num_voxels)
+        sparse_values = sparse_x.values()  # Shape: (num_voxels, in_channels)
+        
+        # self.logger.debug(f"Forward called with sparse_x of shape {sparse_x.shape}, "
+        #                   f"norm_points of shape {norm_points.shape}.")
 
-        # 1) Absolute positional encoding (intra)
-        # ---------------------------------------
-        # Flatten points [B*N, 3], apply MLP, reshape back to [B, N, C]
-        intra_pos_enc = self.intra_pos_mlp(norm_points.view(-1, 3)).view(B, N, C)
-        x = x + intra_pos_enc  # Residual addition
+        # 🔹 Determine batch size
+        B = sparse_indices[0].max().item() + 1  
 
-        # 2) Compute queries (q) and values (v)
-        # -------------------------------------
-        # Reshape for multi-head attention
-        q = self.to_query(x).view(B, N, self.num_heads, self.attn_channels)
-        v = self.to_value(x).view(B, N, self.num_heads, self.attn_channels)
+        # 🔹 Apply Absolute Positional Encoding (Intra-Position Encoding)
+        intra_pos_enc = self.intra_pos_mlp(norm_points.view(-1, 3))  # [B*N, in_channels]
+        sparse_values += intra_pos_enc[sparse_indices[0]]  # Add intra-positional encoding
 
-        # 3) Kernel mapping for neighborhood indices
-        # ------------------------------------------
-        # Coordinates should be integer for offset-based computation
-        coordinates = norm_points.long()
-        kernel_map, out_coordinates = self.get_kernel_map_and_out_key(coordinates, batch_indices)
+        # 🔹 Compute Queries, Keys, and Values
+        q = self.to_query(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
+        v = self.to_value(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
+
+        # 🔹 Kernel Mapping for Neighborhood Indices
+        kernel_map, out_coordinates = self.get_kernel_map_and_out_key(sparse_x)
         kq_map = self.key_query_map_from_kernel_map(kernel_map)
-        M = out_coordinates.shape[0]
 
-        device = x.device
-        dtype = x.dtype
+        device = sparse_x.device
+        dtype = sparse_x.dtype
 
-        # 4) Prepare tensors for attention scatter operations
-        # ---------------------------------------------------
-        # input_indices: [K]
+        # 🔹 Prepare Tensors for Sparse Attention Computation
         input_indices = torch.tensor([kq[0] for kq in kq_map], device=device, dtype=torch.long)
-        # output_indices: [K]
         output_indices = torch.tensor([kq[1] for kq in kq_map], device=device, dtype=torch.long)
-        # rel_pos_indices: [K]
         rel_pos_indices = torch.tensor([kq[2] for kq in kq_map], device=device, dtype=torch.long)
 
-        # 5) Normalize q and relative position encodings for cosine similarity
-        # -------------------------------------------------------------------
-        norm_q = F.normalize(q, p=2, dim=-1)  # [B, N, num_heads, attn_channels]
-        norm_pos_enc = F.normalize(self.inter_pos_enc, p=2, dim=-1)  # [kernel_volume, num_heads, attn_channels]
-
-        # Gather per-neighbor q and inter_pos_enc
-        q_gathered = norm_q[:, input_indices, :, :]  # [B, K, num_heads, attn_channels]
-        pos_enc_gathered = norm_pos_enc[rel_pos_indices, :, :]  # [K, num_heads, attn_channels]
-
-        # 6) Compute attention contributions via cosine similarity
-        # ---------------------------------------------------------
-        # (q_gathered * pos_enc) -> sum over last dim
-        attn_contribution = (q_gathered * pos_enc_gathered.unsqueeze(0)).sum(dim=-1)  # [B, K, num_heads]
-
-        # Scatter-add attention contributions into [B, M, num_heads]
+        # 🔹 Compute Maximum Output Points (M)
+        M = max(out_coordinates.shape[0], output_indices.shape[0])
         attn = torch.zeros((B, M, self.num_heads), device=device, dtype=dtype)
+
+        # 🔹 Ensure `output_indices` Matches `M`
+        output_indices = output_indices.clamp(0, M - 1)
+        num_values = min(output_indices.shape[0], M)
+        output_indices = output_indices[:num_values]
+
+        # 🔹 Normalize Queries & Compute Cosine Similarity
+        norm_q = F.normalize(q, p=2, dim=-1)  
+        norm_pos_enc = F.normalize(self.inter_pos_enc, p=2, dim=-1)  
+
+        q_gathered = norm_q[input_indices]  
+        pos_enc_gathered = norm_pos_enc[rel_pos_indices]  
+
+        attn_contribution = (q_gathered * pos_enc_gathered.unsqueeze(0)).sum(dim=-1)  
+        attn_contribution = attn_contribution.expand(B, -1, -1)
+
+        # 🔹 Expand Output Indices for Scatter Add
+        expanded_output_indices = output_indices.unsqueeze(0).expand(B, -1)
+
+        # 🔹 Compute Sparse Attention Weights
         attn.scatter_add_(
             1,
-            output_indices.unsqueeze(0).unsqueeze(-1).expand(B, -1, self.num_heads),
+            expanded_output_indices.unsqueeze(-1).expand(-1, -1, self.num_heads),
             attn_contribution
         )
 
-        # Normalize to get final attention coefficients
-        attn = F.softmax(attn, dim=1)  # [B, M, num_heads]
+        attn = F.softmax(attn, dim=1)  # Normalize attention weights
 
-        # 7) Use attention to weigh values (v)
-        # -------------------------------------
+        # 🔹 Apply Attention Weights to Values
         out_F = torch.zeros((B, M, self.num_heads, self.attn_channels), device=device, dtype=dtype)
-        v_gathered = v[:, input_indices, :, :]  # [B, K, num_heads, attn_channels]
+        v_gathered = v[input_indices]
 
-        # Weighted values based on attention
-        weighted_v = attn[:, output_indices, :].unsqueeze(-1) * v_gathered  # [B, K, num_heads, attn_channels]
+        weighted_v = attn[:, output_indices, :].unsqueeze(-1) * v_gathered  
 
-        # Scatter-add weighted values into out_F
         out_F.scatter_add_(
             1,
             output_indices.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
@@ -173,13 +158,9 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
             weighted_v
         )
 
-        # 8) Output projection + global max pooling
-        # -----------------------------------------
-        # Combine multi-head features, project to out_channels
-        out_projected = self.to_out(out_F.view(B, M, -1))  # [B, M, out_channels]
-
-        # Pool across spatial dimension M
-        out_permuted = out_projected.permute(0, 2, 1)  # [B, out_channels, M]
-        out = self.max_pool(out_permuted).squeeze(-1)  # [B, out_channels]
+        # 🔹 Output Projection & Global Feature Aggregation
+        out_projected = self.to_out(out_F.view(B, M, -1))  
+        out_permuted = out_projected.permute(0, 2, 1)  
+        out = self.max_pool(out_permuted).squeeze(-1)  
 
         return out, attn

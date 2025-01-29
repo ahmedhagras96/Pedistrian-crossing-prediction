@@ -4,134 +4,115 @@ import torch.nn as nn
 from modules.attention.pointcloud_attention.layers.kernel_generator import KernelGenerator
 from modules.config.logger import Logger
 
-
 class LocalSelfAttentionBase(nn.Module):
     """
-    A base class for local self-attention mechanisms that operate on coordinates.
-    It uses a KernelGenerator to create kernel offsets, then builds a kernel map
-    that can be used in attention computations.
+    A base class for local self-attention mechanisms that operate on sparse coordinates.
+    Uses a `KernelGenerator` to define kernel offsets and constructs a kernel map
+    for sparse tensor attention computations.
     """
 
-    def __init__(self, kernel_size, dimension):
+    def __init__(self, kernel_size: int | tuple, dimension: int):
         """
-        Initialize the base local self-attention module.
+        Initializes the base local self-attention module.
 
         Args:
-            kernel_size (int or tuple): Size of the kernel in each dimension.
-            dimension (int): The dimensionality of the coordinate space (e.g., 3 for 3D).
+            kernel_size (int or tuple):
+                - If an integer is provided, the same kernel size is used for all dimensions.
+                - If a tuple is provided, each element corresponds to the size along a specific dimension.
+            dimension (int): 
+                - The number of spatial dimensions in which the kernel operates (e.g., 3 for 3D).
         """
         super().__init__()
+        
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initializing {self.__class__.__name__} with "
                          f"kernel_size={kernel_size}, dimension={dimension}")
-
+        
         self.kernel_size = kernel_size
         self.dimension = dimension
 
-        # Create the kernel generator
+        # Initialize the kernel generator
         self.kernel_generator = KernelGenerator(kernel_size, dimension)
-        self.kernel_volume = self.kernel_generator.kernel_volume
-
+        self.kernel_volume = self.kernel_generator.kernel_volume  # Total number of elements in the kernel
         # self.logger.debug(f"Kernel volume set to {self.kernel_volume}")
 
-    def get_kernel_map_and_out_key(self, coordinates: torch.Tensor, batch_indices: torch.Tensor):
+    def get_kernel_map_and_out_key(self, sparse_coords: torch.sparse_coo_tensor):
         """
-        Build a map of input indices to output indices based on local neighborhoods.
+        Constructs a kernel mapping for sparse tensors.
+
+        This function maps each voxel to its surrounding neighborhood based on 
+        the kernel offsets, generating a mapping between input and output indices.
 
         Args:
-            coordinates (torch.Tensor):
-                A tensor of shape [B, N, D], where B is total batch size (flattened),
-                N is number of points in that batch, and D is the coordinate dimension.
-            batch_indices (torch.Tensor):
-                A tensor of shape [B, N] (or possibly [B*N]) indicating the batch index
-                for each point.
+            sparse_coords (torch.sparse_coo_tensor): 
+                - Sparse coordinate tensor of shape `(4, num_voxels)`, where:
+                  - The first row represents batch indices.
+                  - The remaining rows represent spatial coordinates (x, y, z).
 
         Returns:
-            kernel_map (list of tuples):
-                Each tuple is (input_index, output_index, rel_pos_idx),
-                where 'rel_pos_idx' indexes into self.kernel_generator.kernel_offsets.
-            out_key_tensor (torch.Tensor):
-                A tensor of shape [M, D] representing the unique output coordinates
-                for the entire set of points.
+            tuple:
+                - **kernel_map** (list of tuples): Each tuple `(input_idx, output_idx, rel_pos_idx)`
+                  represents the mapping of input indices to output indices.
+                - **out_key_tensor** (torch.Tensor): A tensor of shape `[M, D]` representing 
+                  unique output coordinates for the sparse tensor.
         """
-        # self.logger.debug(f"Building kernel map for coordinates of shape {coordinates.shape}")
+        sparse_indices = sparse_coords.indices()  # Shape: (4, num_voxels)
+        num_voxels = sparse_indices.shape[1]
 
         kernel_map = []
         out_key = []
         key_to_index = {}
         current_index = 0
 
-        # Number of batches is max index + 1
-        B = batch_indices.max().item() + 1
-        # self.logger.debug(f"Detected {B} distinct batch(es).")
+        # Extract batch IDs and spatial coordinates
+        batch_ids = sparse_indices[0]  # First row contains batch indices
+        coordinates = sparse_indices[1:].T  # Extract (x, y, z) indices
 
-        # Build kernel map for each batch
-        for b in range(B):
-            # Extract coordinates belonging to the current batch 'b'
-            batch_coords = coordinates[batch_indices == b]
+        # Iterate over all points in the sparse tensor
+        for i in range(num_voxels):
+            batch_id = batch_ids[i].item()
+            coord = coordinates[i]
 
-            for idx, coord in enumerate(batch_coords):
-                # For each offset in the kernel, compute neighbor coordinate
-                for rel_pos_idx, offset in enumerate(self.kernel_generator.kernel_offsets):
-                    neighbor = tuple((coord + offset).tolist())
-                    key = (b, neighbor)
+            for rel_pos_idx, offset in enumerate(self.kernel_generator.kernel_offsets):
+                neighbor = tuple((coord + offset).tolist())
+                key = (batch_id, neighbor)
 
-                    # If this neighbor hasn't been encountered, add it
-                    if key not in key_to_index:
-                        key_to_index[key] = current_index
-                        out_key.append(key)
-                        current_index += 1
+                # If this neighbor hasn't been encountered before, add it
+                if key not in key_to_index:
+                    key_to_index[key] = current_index
+                    out_key.append(key)
+                    current_index += 1
 
-                    # Retrieve the output index for this neighbor
-                    output_index = key_to_index[key]
+                output_index = key_to_index[key]
+                kernel_map.append((i, output_index, rel_pos_idx))
 
-                    # Append mapping info
-                    kernel_map.append((idx, output_index, rel_pos_idx))
-
-        # Convert the out_key (which contains (batch, coordinate)) to a tensor of just coordinates
+        # Convert the output key list to a tensor
         out_key_tensor = torch.tensor(
             [key[1] for key in out_key],
-            device=coordinates.device,
+            device=sparse_coords.device,
             dtype=torch.long
         )
-
+        
         # self.logger.debug(f"Kernel map size: {len(kernel_map)}; out_key_tensor shape: {out_key_tensor.shape}")
+        
         return kernel_map, out_key_tensor
 
-    def key_query_map_from_kernel_map(self, kernel_map):
+    def key_query_map_from_kernel_map(self, kernel_map: list):
         """
-        Convert a kernel map to a key-query map. This is effectively
-        a reshaping or labeling of the same indices.
+        Converts a kernel map to a key-query mapping.
+
+        This function reshapes and labels the same data structure to explicitly
+        represent key-query relationships.
 
         Args:
-            kernel_map (list of tuples): Each tuple is (input_index, output_index, rel_pos_idx).
+            kernel_map (list of tuples): 
+                - Each tuple `(input_idx, output_idx, rel_pos_idx)` defines 
+                  the mapping between input indices and their corresponding 
+                  neighborhood outputs.
 
         Returns:
-            list of tuples: Each tuple is (input_idx, output_idx, rel_pos_idx),
-            representing the same data with a more explicit naming scheme.
+            list of tuples: A structured key-query map in the same format.
         """
         # self.logger.debug(f"Building key-query map from kernel map of length {len(kernel_map)}")
 
-        kq_map = []
-        for input_idx, output_idx, rel_pos_idx in kernel_map:
-            kq_map.append((input_idx, output_idx, rel_pos_idx))
-
-        return kq_map
-
-    def key_query_indices_from_kernel_map(self, kq_map):
-        """
-        Extract the indices from a key-query map for further processing.
-
-        Args:
-            kq_map (list of tuples): Each tuple is (input_idx, output_idx, rel_pos_idx).
-
-        Returns:
-            list of tuples: Each tuple is (input_idx, output_idx, rel_pos_idx).
-        """
-        # self.logger.debug(f"Extracting key-query indices from map of length {len(kq_map)}")
-
-        indices = []
-        for input_idx, output_idx, rel_pos_idx in kq_map:
-            indices.append((input_idx, output_idx, rel_pos_idx))
-
-        return indices
+        return [(input_idx, output_idx, rel_pos_idx) for input_idx, output_idx, rel_pos_idx in kernel_map]

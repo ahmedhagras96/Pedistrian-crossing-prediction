@@ -2,23 +2,27 @@
 
 from modules.config.logger import Logger
 
-
 class KernelGenerator:
     """
-    Generates kernel offsets and related information for a given kernel size
-    in a specified number of dimensions.
+    A class for generating kernel offsets and related information based on 
+    a given kernel size in a specified number of dimensions.
+
+    This is primarily used for defining local neighborhoods in point cloud 
+    self-attention models.
     """
 
-    def __init__(self, kernel_size, dimension):
+    def __init__(self, kernel_size: int | tuple, dimension: int):
         """
-        Initialize the KernelGenerator.
+        Initializes the KernelGenerator.
 
         Args:
-            kernel_size (int or tuple): Size of the kernel. If an integer is provided, it is
-                used for all dimensions; if a tuple is provided, each element corresponds to
-                the size along a specific dimension.
-            dimension (int): The number of dimensions in which the kernel will operate.
+            kernel_size (int or tuple):
+                - If an integer is provided, the same kernel size is used for all dimensions.
+                - If a tuple is provided, each element corresponds to the size along a specific dimension.
+            dimension (int):
+                - The number of dimensions in which the kernel operates.
         """
+        
         # Initialize logger (class name passed as string for static usage if desired)
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.logger.info(f"Initializing {self.__class__.__name__} with "
@@ -27,43 +31,52 @@ class KernelGenerator:
         self.kernel_size = kernel_size
         self.dimension = dimension
 
-        # Compute kernel volume (number of elements in the kernel)
-        if isinstance(kernel_size, int):
-            self.kernel_volume = kernel_size ** dimension
-        else:
-            self.kernel_volume = torch.prod(
-                torch.tensor(kernel_size, dtype=torch.int32)
-            ).item()
+        # Compute kernel volume (total number of elements in the kernel)
+        self.kernel_volume = self._compute_kernel_volume()
         # self.logger.debug(f"Computed kernel_volume={self.kernel_volume}")
 
-        # Precompute offsets for the kernel
-        self.kernel_offsets = self.generate_kernel_offsets()
+        # Precompute kernel offsets
+        self.kernel_offsets = self._generate_kernel_offsets()
 
-    def generate_kernel_offsets(self) -> torch.Tensor:
+    def _compute_kernel_volume(self) -> int:
         """
-        Generate relative offsets for each element in the kernel.
+        Computes the volume of the kernel (i.e., the total number of elements).
 
         Returns:
-            torch.Tensor: A tensor of shape [kernel_volume, dimension], where
-                each row represents an offset.
+            int: The number of elements in the kernel.
         """
-        # For each dimension, generate an integer range centered around 0
+        if isinstance(self.kernel_size, int):
+            return self.kernel_size ** self.dimension
+        return torch.prod(torch.tensor(self.kernel_size, dtype=torch.int32)).item()
+
+    def _generate_kernel_offsets(self) -> torch.Tensor:
+        """
+        Generates relative offsets for each element in the kernel.
+
+        Returns:
+            torch.Tensor: A tensor of shape `[kernel_volume, dimension]`, 
+                          where each row represents an offset.
+        """
+        # Generate an integer range centered around 0 for each dimension
         # Example: for kernel_size=3, dimension=1, range -> [-1, 0, 1]
         if isinstance(self.kernel_size, int):
             half = self.kernel_size // 2
-            ranges = [
-                torch.arange(-half + 1, half + 1) for _ in range(self.dimension)
-            ]
+            ranges = [torch.arange(-half + 1, half + 1) for _ in range(self.dimension)]
         else:
-            # If kernel_size is a tuple, handle each dimension's range independently
-            ranges = []
-            for k in self.kernel_size:
-                half = k // 2
-                ranges.append(torch.arange(-half + 1, half + 1))
+            ranges = [torch.arange(-k // 2 + 1, k // 2 + 1) for k in self.kernel_size]
 
         # Create a meshgrid and flatten to get all offsets
         grid = torch.meshgrid(*ranges, indexing="ij")
         offsets = torch.stack(grid, dim=-1).view(-1, self.dimension)
-
         # self.logger.debug(f"Generated {offsets.shape[0]} kernel offsets.")
+
         return offsets
+
+    def get_kernel_offsets(self) -> torch.Tensor:
+        """
+        Returns the precomputed kernel offsets.
+
+        Returns:
+            torch.Tensor: The kernel offsets of shape `[kernel_volume, dimension]`.
+        """
+        return self.kernel_offsets
