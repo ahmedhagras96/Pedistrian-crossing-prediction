@@ -4,23 +4,45 @@ import torch.nn as nn
 
 from attention_vector.point_cloud_attn_vector.utils.base import LocalSelfAttentionBase
 
-
 class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
-    def __init__(self, in_channels, out_channels=None, kernel_size=3, num_heads=4):
-        super(LightweightSelfAttentionLayer, self).__init__(kernel_size, dimension=3)
+    """
+    A lightweight self-attention layer for sparse point cloud data, operating in 3D space.
+    This layer processes sparse tensors efficiently by leveraging kernel-based neighborhood computations.
+
+    Inherits from `LocalSelfAttentionBase` for kernel operations.
+    """
+
+    def __init__(self, in_channels: int, out_channels: int = None, kernel_size: int = 3, num_heads: int = 4):
+        """
+        Initializes the LightweightSelfAttentionLayer.
+
+        Args:
+            in_channels (int): 
+                Number of input feature channels per point.
+            out_channels (int, optional): 
+                Number of output feature channels after attention. Defaults to in_channels.
+            kernel_size (int, optional): 
+                Size of the local attention kernel. Defaults to 3.
+            num_heads (int, optional): 
+                Number of attention heads. Defaults to 4.
+        """
+        super().__init__(kernel_size=kernel_size, dimension=3)
 
         out_channels = in_channels if out_channels is None else out_channels
         assert out_channels % num_heads == 0, "out_channels must be divisible by num_heads"
+
+        # Store layer parameters
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.num_heads = num_heads
         self.attn_channels = out_channels // num_heads
 
-        self.to_query = nn.Linear(in_channels, out_channels)
-        self.to_value = nn.Linear(in_channels, out_channels)
-        self.to_out = nn.Linear(out_channels, out_channels)
+        # Linear transformations for queries, values, and output
+        self.to_query = nn.Linear(in_channels, out_channels, bias=False)
+        self.to_value = nn.Linear(in_channels, out_channels, bias=False)
+        self.to_out = nn.Linear(out_channels, out_channels, bias=False)
 
-        # Absolute positional encoding
+        # Absolute (intra) positional encoding
         self.intra_pos_mlp = nn.Sequential(
             nn.Linear(3, 3, bias=False),
             nn.BatchNorm1d(3),
@@ -28,73 +50,107 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
             nn.Linear(3, in_channels, bias=False),
             nn.BatchNorm1d(in_channels),
             nn.ReLU(inplace=True),
-            nn.Linear(in_channels, in_channels)
+            nn.Linear(in_channels, in_channels, bias=False),
         )
 
-        # Relative positional encoding
-        self.inter_pos_enc = nn.Parameter(torch.FloatTensor(self.kernel_volume, self.num_heads, self.attn_channels))
-        nn.init.normal_(self.inter_pos_enc, 0, 1)
+        # Relative (inter) positional encoding
+        self.inter_pos_enc = nn.Parameter(
+            torch.FloatTensor(self.kernel_volume, self.num_heads, self.attn_channels)
+        )
+        nn.init.normal_(self.inter_pos_enc, mean=0.0, std=1.0)
 
-        # Max pooling layer for global extraction
+        # Global feature aggregation using adaptive max pooling
         self.max_pool = nn.AdaptiveMaxPool1d(1)
-    def forward(self, x, norm_points, batch_indices):
-        B, N, C = x.shape
 
-        # Apply intra positional encoding
-        intra_pos_enc = self.intra_pos_mlp(norm_points.view(-1, 3)).view(B, N, C)
-        x = x + intra_pos_enc
+    def forward(self, sparse_x: torch.sparse_coo_tensor, norm_points: torch.Tensor):
+        """
+        Forward pass for lightweight self-attention on sparse point cloud data.
 
-        # Compute query and value tensors
-        q = self.to_query(x).view(B, N, self.num_heads, self.attn_channels)  # [B, N, num_heads, attn_channels]
-        v = self.to_value(x).view(B, N, self.num_heads, self.attn_channels)  # [B, N, num_heads, attn_channels]
+        Args:
+            sparse_x (torch.sparse_coo_tensor): 
+                Sparse input feature tensor.
+            norm_points (torch.Tensor): 
+                Normalized point coordinates of shape `[B, N, 3]`.
 
-        # Kernel mapping for neighbors
-        coordinates = norm_points.long()  
-        kernel_map, out_coordinates = self.get_kernel_map_and_out_key(coordinates, batch_indices)  # kernel_map: list, out_coordinates: [M, D]
-        kq_map = self.key_query_map_from_kernel_map(kernel_map)  # List of tuples (input_index, output_index, rel_pos_idx)
+        Returns:
+            tuple:
+                - **out** (torch.Tensor): Aggregated output features of shape `[B, out_channels]`.
+                - **attn** (torch.Tensor): Attention map of shape `[B, M, num_heads]`.
+        """
+        # Extract sparse tensor components
+        sparse_indices = sparse_x.indices()  # Shape: (4, num_voxels)
+        sparse_values = sparse_x.values()  # Shape: (num_voxels, in_channels)
 
-        M = out_coordinates.shape[0]
-        device = x.device
-        dtype = x.dtype
+        # 🔹 Determine batch size
+        B = sparse_indices[0].max().item() + 1  
 
-        # Initialize 
-        attn = torch.zeros((B, M, self.num_heads), device=device, dtype=dtype)  # [B, M, num_heads]
+        # 🔹 Apply Absolute Positional Encoding (Intra-Position Encoding)
+        intra_pos_enc = self.intra_pos_mlp(norm_points.view(-1, 3))  # [B*N, in_channels]
+        sparse_values += intra_pos_enc[sparse_indices[0]]  # Add intra-positional encoding
 
-        # Convert kq_map to tensors for vectorization
-        input_indices = torch.tensor([kq[0] for kq in kq_map], device=device, dtype=torch.long)  # [K]
-        output_indices = torch.tensor([kq[1] for kq in kq_map], device=device, dtype=torch.long)  # [K]
-        rel_pos_indices = torch.tensor([kq[2] for kq in kq_map], device=device, dtype=torch.long)  # [K]
-        
-        # Normalize query and positional encodings to get cosine similarity
-        norm_q = F.normalize(q, p=2, dim=-1)  # [B, N, num_heads, attn_channels]
-        norm_pos_enc = F.normalize(self.inter_pos_enc, p=2, dim=-1)  # [kernel_volume, num_heads, attn_channels]
-        # Gather all q and pos_enc
-        q_gathered = norm_q[:, input_indices, :, :]  # [B, K, num_heads, attn_channels]
-        pos_enc = norm_pos_enc[rel_pos_indices, :, :]  # [K, num_heads, attn_channels]
+        # 🔹 Compute Queries, Keys, and Values
+        q = self.to_query(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
+        v = self.to_value(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
 
-        # Compute attention contributions using cosine similarity instead of matrix multiplication
-        attn_contribution = (q_gathered * pos_enc.unsqueeze(0)).sum(dim=-1)  # [B, K, num_heads]
+        # 🔹 Kernel Mapping for Neighborhood Indices
+        kernel_map, out_coordinates = self.get_kernel_map_and_out_key(sparse_x)
+        kq_map = self.key_query_map_from_kernel_map(kernel_map)
 
-        # Scatter add attention contributions
-        attn.scatter_add_(1, output_indices.unsqueeze(0).unsqueeze(-1).expand(B, -1, self.num_heads), attn_contribution)
+        device = sparse_x.device
+        dtype = sparse_x.dtype
 
-        attn = F.softmax(attn, dim=1)  # [B, M, num_heads]
+        # 🔹 Prepare Tensors for Sparse Attention Computation
+        input_indices = torch.tensor([kq[0] for kq in kq_map], device=device, dtype=torch.long)
+        output_indices = torch.tensor([kq[1] for kq in kq_map], device=device, dtype=torch.long)
+        rel_pos_indices = torch.tensor([kq[2] for kq in kq_map], device=device, dtype=torch.long)
 
-        out_F = torch.zeros((B, M, self.num_heads, self.attn_channels), device=device, dtype=dtype)  # [B, M, num_heads, attn_channels]
+        # 🔹 Compute Maximum Output Points (M)
+        M = max(out_coordinates.shape[0], output_indices.shape[0])
+        attn = torch.zeros((B, M, self.num_heads), device=device, dtype=dtype)
 
-        # Gather all v and compute weighted_v
-        v_gathered = v[:, input_indices, :, :]  # [B, K, num_heads, attn_channels]
-        weighted_v = attn[:, output_indices, :].unsqueeze(-1) * v_gathered  # [B, K, num_heads, attn_channels]
+        # 🔹 Ensure `output_indices` Matches `M`
+        output_indices = output_indices.clamp(0, M - 1)
+        num_values = min(output_indices.shape[0], M)
+        output_indices = output_indices[:num_values]
 
-        # Scatter add weighted_v into out_F
-        out_F.scatter_add_(1, output_indices.unsqueeze(0).unsqueeze(-1).unsqueeze(-1).expand(B, -1, self.num_heads, self.attn_channels), weighted_v)
+        # 🔹 Normalize Queries & Compute Cosine Similarity
+        norm_q = F.normalize(q, p=2, dim=-1)  
+        norm_pos_enc = F.normalize(self.inter_pos_enc, p=2, dim=-1)  
 
-        # Output projection
-        out = self.to_out(out_F.view(B, M, -1))  # [B, M, out_channels]
-        out_permuted = out.permute(0, 2, 1)  # [B, out_channels, M]
+        q_gathered = norm_q[input_indices]  
+        pos_enc_gathered = norm_pos_enc[rel_pos_indices]  
 
-        # Max pooling for global extraction
-        out = self.max_pool(out_permuted).squeeze(-1) # [B, out_channels]
+        attn_contribution = (q_gathered * pos_enc_gathered.unsqueeze(0)).sum(dim=-1)  
+        attn_contribution = attn_contribution.expand(B, -1, -1)
+
+        # 🔹 Expand Output Indices for Scatter Add
+        expanded_output_indices = output_indices.unsqueeze(0).expand(B, -1)
+
+        # 🔹 Compute Sparse Attention Weights
+        attn.scatter_add_(
+            1,
+            expanded_output_indices.unsqueeze(-1).expand(-1, -1, self.num_heads),
+            attn_contribution
+        )
+
+        attn = F.softmax(attn, dim=1)  # Normalize attention weights
+
+        # 🔹 Apply Attention Weights to Values
+        out_F = torch.zeros((B, M, self.num_heads, self.attn_channels), device=device, dtype=dtype)
+        v_gathered = v[input_indices]
+
+        weighted_v = attn[:, output_indices, :].unsqueeze(-1) * v_gathered  
+
+        out_F.scatter_add_(
+            1,
+            output_indices.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
+            .expand(B, -1, self.num_heads, self.attn_channels),
+            weighted_v
+        )
+
+        # 🔹 Output Projection & Global Feature Aggregation
+        out_projected = self.to_out(out_F.view(B, M, -1))  
+        out_permuted = out_projected.permute(0, 2, 1)  
+        out = self.max_pool(out_permuted).squeeze(-1)  
 
         return out, attn
-
