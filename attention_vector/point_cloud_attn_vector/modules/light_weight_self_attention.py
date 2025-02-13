@@ -2,40 +2,31 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-from attention_vector.point_cloud_attn_vector.utils.base import LocalSelfAttentionBase
+from attention_vector.point_cloud_attn_vector.modules.local_base_self_attention import LocalSelfAttentionBase
+from attention_vector.point_cloud_attn_vector.utils.sebottleneck import SEBottleneck
 
 class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
     """
     A lightweight self-attention layer for sparse point cloud data, operating in 3D space.
     This layer processes sparse tensors efficiently by leveraging kernel-based neighborhood computations.
-
-    Inherits from `LocalSelfAttentionBase` for kernel operations.
     """
 
-    def __init__(self, in_channels: int, out_channels: int = None, kernel_size: int = 3, num_heads: int = 4):
+    def __init__(self, in_channels: int, out_channels: int = None, kernel_size: int = 3, num_heads: int = 4, sparse_ratio: float = 0.5):
         """
         Initializes the LightweightSelfAttentionLayer.
-
-        Args:
-            in_channels (int): 
-                Number of input feature channels per point.
-            out_channels (int, optional): 
-                Number of output feature channels after attention. Defaults to in_channels.
-            kernel_size (int, optional): 
-                Size of the local attention kernel. Defaults to 3.
-            num_heads (int, optional): 
-                Number of attention heads. Defaults to 4.
         """
-        super().__init__(kernel_size=kernel_size, dimension=3)
+        super().__init__(kernel_size=kernel_size, dimension=3, sparse_ratio=sparse_ratio)
 
         out_channels = in_channels if out_channels is None else out_channels
         assert out_channels % num_heads == 0, "out_channels must be divisible by num_heads"
 
-        # Store layer parameters
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.num_heads = num_heads
         self.attn_channels = out_channels // num_heads
+
+        # Squeeze-and-Excitation Bottleneck before Attention
+        self.feature_bottleneck = SEBottleneck(in_channels)
 
         # Linear transformations for queries, values, and output
         self.to_query = nn.Linear(in_channels, out_channels, bias=False)
@@ -65,92 +56,64 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
     def forward(self, sparse_x: torch.sparse_coo_tensor, norm_points: torch.Tensor):
         """
         Forward pass for lightweight self-attention on sparse point cloud data.
-
-        Args:
-            sparse_x (torch.sparse_coo_tensor): 
-                Sparse input feature tensor.
-            norm_points (torch.Tensor): 
-                Normalized point coordinates of shape `[B, N, 3]`.
-
-        Returns:
-            tuple:
-                - **out** (torch.Tensor): Aggregated output features of shape `[B, out_channels]`.
-                - **attn** (torch.Tensor): Attention map of shape `[B, M, num_heads]`.
         """
-        # Extract sparse tensor components
-        sparse_indices = sparse_x.indices()  # Shape: (4, num_voxels)
-        sparse_values = sparse_x.values()  # Shape: (num_voxels, in_channels)
+        sparse_x = sparse_x.coalesce()
+        sparse_values = sparse_x.values()
 
-        # 🔹 Determine batch size
-        B = sparse_indices[0].max().item() + 1  
+        # Apply Squeeze-and-Excitation Bottleneck (Adaptive Feature Selection)
+        sparse_values = self.feature_bottleneck(sparse_values.unsqueeze(-1)).squeeze(-1)
 
-        # 🔹 Apply Absolute Positional Encoding (Intra-Position Encoding)
-        intra_pos_enc = self.intra_pos_mlp(norm_points.view(-1, 3))  # [B*N, in_channels]
-        sparse_values += intra_pos_enc[sparse_indices[0]]  # Add intra-positional encoding
+        # Compute Queries, Keys, and Values
+        q = self.to_query(sparse_values).view(-1, self.num_heads, self.attn_channels)
+        v = self.to_value(sparse_values).view(-1, self.num_heads, self.attn_channels)
 
-        # 🔹 Compute Queries, Keys, and Values
-        q = self.to_query(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
-        v = self.to_value(sparse_values).view(-1, self.num_heads, self.attn_channels)  # [num_voxels, num_heads, attn_channels]
-
-        # 🔹 Kernel Mapping for Neighborhood Indices
+        # Kernel Mapping for Neighborhood Indices
         kernel_map, out_coordinates = self.get_kernel_map_and_out_key(sparse_x)
-        kq_map = self.key_query_map_from_kernel_map(kernel_map)
 
-        device = sparse_x.device
-        dtype = sparse_x.dtype
+        # Prepare Tensors for Sparse Attention Computation
+        input_indices = kernel_map[:, 0]
+        output_indices = kernel_map[:, 1]
+        rel_pos_indices = kernel_map[:, 2]
 
-        # 🔹 Prepare Tensors for Sparse Attention Computation
-        input_indices = torch.tensor([kq[0] for kq in kq_map], device=device, dtype=torch.long)
-        output_indices = torch.tensor([kq[1] for kq in kq_map], device=device, dtype=torch.long)
-        rel_pos_indices = torch.tensor([kq[2] for kq in kq_map], device=device, dtype=torch.long)
+        # Compute Attention Contribution
+        attn_contribution = (F.normalize(q[input_indices], dim=-1) *
+                             F.normalize(self.inter_pos_enc[rel_pos_indices].unsqueeze(0), dim=-1)).sum(dim=-1)
 
-        # 🔹 Compute Maximum Output Points (M)
-        M = max(out_coordinates.shape[0], output_indices.shape[0])
-        attn = torch.zeros((B, M, self.num_heads), device=device, dtype=dtype)
+        # Compute Sparse Attention Weights
+        attn = torch.zeros((sparse_x.shape[0], out_coordinates.shape[0], self.num_heads), device=sparse_x.device, dtype=sparse_x.dtype)
 
-        # 🔹 Ensure `output_indices` Matches `M`
-        output_indices = output_indices.clamp(0, M - 1)
-        num_values = min(output_indices.shape[0], M)
-        output_indices = output_indices[:num_values]
+        # DEBUGGING
+        #----------------------#
+        # Print BEFORE fixing shapes
+        # print(f"b_attn.shape: {attn.shape}")  # Expected: (batch_size, num_voxels, num_heads)
+        # print(f"b_output_indices.shape BEFORE fix: {output_indices.shape}")  # Expected: (batch_size, num_voxels)
+        # print(f"b_attn_contribution.shape: {attn_contribution.shape}")  # Expected: (batch_size, num_voxels, num_heads)
+        #----------------------#
 
-        # 🔹 Normalize Queries & Compute Cosine Similarity
-        norm_q = F.normalize(q, p=2, dim=-1)  
-        norm_pos_enc = F.normalize(self.inter_pos_enc, p=2, dim=-1)  
 
-        q_gathered = norm_q[input_indices]  
-        pos_enc_gathered = norm_pos_enc[rel_pos_indices]  
+        output_indices = output_indices.view(1, -1).expand(attn.shape[0], -1)
+        output_indices = output_indices.squeeze(-1)
+        output_indices = output_indices.unsqueeze(-1).expand(-1, -1, attn.shape[2])
 
-        attn_contribution = (q_gathered * pos_enc_gathered.unsqueeze(0)).sum(dim=-1)  
-        attn_contribution = attn_contribution.expand(B, -1, -1)
+        # DEBUGGING
+        #----------------------#
+        # Print AFTER fixing shapes
+        # print(f"a_attn.shape: {attn.shape}")  # Should be (batch_size, num_voxels, num_heads)
+        # print(f"a_output_indices.shape: {output_indices.shape}")  # Should match attn[:2]
+        # print(f"a_attn_contribution.shape: {attn_contribution.shape}")  # Should match attn
+        #----------------------#
 
-        # 🔹 Expand Output Indices for Scatter Add
-        expanded_output_indices = output_indices.unsqueeze(0).expand(B, -1)
+        attn_contribution = attn_contribution.expand(attn.shape)
+        attn.scatter_add_(1, output_indices, attn_contribution)
 
-        # 🔹 Compute Sparse Attention Weights
-        attn.scatter_add_(
-            1,
-            expanded_output_indices.unsqueeze(-1).expand(-1, -1, self.num_heads),
-            attn_contribution
-        )
+        # Apply Attention Weights to Values
+        weighted_v = attn.gather(1, output_indices).unsqueeze(-1) * v[input_indices].unsqueeze(0).expand(attn.shape[0], -1, -1, -1)
+        out_F = torch.zeros((sparse_x.shape[0], out_coordinates.shape[0], self.num_heads, self.attn_channels), device=sparse_x.device, dtype=sparse_x.dtype)
+        out_F.scatter_add_(1, output_indices.unsqueeze(-1).expand(-1, -1, self.num_heads, self.attn_channels), weighted_v)
 
-        attn = F.softmax(attn, dim=1)  # Normalize attention weights
-
-        # 🔹 Apply Attention Weights to Values
-        out_F = torch.zeros((B, M, self.num_heads, self.attn_channels), device=device, dtype=dtype)
-        v_gathered = v[input_indices]
-
-        weighted_v = attn[:, output_indices, :].unsqueeze(-1) * v_gathered  
-
-        out_F.scatter_add_(
-            1,
-            output_indices.unsqueeze(0).unsqueeze(-1).unsqueeze(-1)
-            .expand(B, -1, self.num_heads, self.attn_channels),
-            weighted_v
-        )
-
-        # 🔹 Output Projection & Global Feature Aggregation
-        out_projected = self.to_out(out_F.view(B, M, -1))  
-        out_permuted = out_projected.permute(0, 2, 1)  
-        out = self.max_pool(out_permuted).squeeze(-1)  
+        # Output Projection & Global Feature Aggregation
+        out_projected = self.to_out(out_F.view(sparse_x.shape[0], -1, self.out_channels))
+        out_permuted = out_projected.permute(0, 2, 1)
+        out = self.max_pool(out_permuted).squeeze(-1)
 
         return out, attn

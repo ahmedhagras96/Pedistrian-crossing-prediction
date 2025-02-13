@@ -4,12 +4,6 @@ import torch
 from attention_vector.point_cloud_attn_vector.modules import LightweightSelfAttentionLayer
 from attention_vector.point_cloud_attn_vector.modules import CentroidAwareVoxelization
 
-
-class PointCloudAttentionModel(nn.Module):import torch
-import torch.nn as nn
-
-
-
 class PointCloudAttentionModel(nn.Module):
     """
     A model that applies centroid-aware voxelization to point cloud data,
@@ -17,7 +11,7 @@ class PointCloudAttentionModel(nn.Module):
     mechanism optimized for sparse tensors.
     """
 
-    def __init__(self, embed_dim: int, kernel_size: int = 3, num_heads: int = 4, max_voxel_grid_size: int = int(1e5)):
+    def __init__(self, embed_dim: int, kernel_size: int = 3, num_heads: int = 4, max_voxel_grid_size: int = int(1e5), sparse_ratio: float = 0.5):
         """
         Initialize the point cloud attention model.
 
@@ -40,8 +34,10 @@ class PointCloudAttentionModel(nn.Module):
             in_channels=embed_dim,
             out_channels=embed_dim,
             num_heads=num_heads,
-            kernel_size=kernel_size
+            kernel_size=kernel_size,
+            sparse_ratio=sparse_ratio
         )
+
 
     def forward(self, x: torch.Tensor):
         """
@@ -65,13 +61,7 @@ class PointCloudAttentionModel(nn.Module):
         """
         # Perform centroid-aware voxelization
         (sparse_features,
-         norm_points,
-         voxel_centroids,
-         voxel_counts,
-         pos_embs) = self.centroid_aware_voxelization(x)
-        
-        sparse_features = sparse_features.coalesce()
-
+         norm_points) = self.centroid_aware_voxelization(x)
 
         # Process voxelized sparse features through attention layer
         out, attn_weights = self.attn_layer(sparse_features, norm_points)
