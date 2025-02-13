@@ -27,6 +27,8 @@ N_EPOCHS = 1
 # Params for model (CAV & LWSA)
 KERNEL_SIZE = 3
 NUM_HEADS = 4
+MAX_VOXEL_GRID_SIZE = 1e2
+SPARSE_RATIO = 0.5
 
 # Params for model (multi head attention model)
 f_input_dim = 5
@@ -39,7 +41,13 @@ train_dl, val_dl, test_dl = get_data_loaders(
 )
 
 # init attention model (CAV & LWSA)
-pcd_attention_model = PointCloudAttentionModel(embed_dim=EMBED_DIM, kernel_size=KERNEL_SIZE, num_heads=NUM_HEADS)
+pcd_attention_model = PointCloudAttentionModel(
+    embed_dim=EMBED_DIM, 
+    kernel_size=KERNEL_SIZE,
+    num_heads=NUM_HEADS, 
+    max_voxel_grid_size=MAX_VOXEL_GRID_SIZE, 
+    sparse_ratio=SPARSE_RATIO
+)
 
 pointnet_model = PointNetFeatureExtractor(input_dim=3, output_dim=EMBED_DIM)
 
