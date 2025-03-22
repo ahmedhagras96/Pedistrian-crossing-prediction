@@ -169,18 +169,20 @@ class CentroidAwareVoxelization(nn.Module):
         target_size = batch_size * num_points
 
         voxel_centroids = self.pad_tensor(voxel_centroids[:min_voxels], target_size, (3,), device=device)
-        voxel_counts = self.pad_tensor(voxel_counts[:min_voxels], target_size, (1,), device=device)
+        flat_points = self.pad_tensor(flat_points[:min_voxels], target_size, (3,), device=device)
+        # voxel_counts = self.pad_tensor(voxel_counts[:min_voxels], target_size, (1,), device=device)
         pooled_features = self.pad_tensor(pooled_features[:min_voxels], target_size, (3,), device=device)
         unique_voxels = self.pad_tensor(unique_voxels[:min_voxels], target_size, (4,), fill_value=-1, device=device)
 
         # Compute voxel sums
-        voxel_sums = voxel_centroids * voxel_counts
+        # voxel_sums = voxel_centroids * voxel_counts
 
         # Ensure voxel_point_indices is within valid range
-        voxel_point_indices = voxel_point_indices.clamp(0, voxel_centroids.shape[0] - 1)
+        # voxel_point_indices = voxel_point_indices.clamp(0, voxel_centroids.shape[0] - 1)
+        # print(flat_points.shape, voxel_centroids[voxel_point_indices].shape)
 
         # Normalize points
-        norm_points = flat_points - voxel_centroids[voxel_point_indices]
+        norm_points = flat_points - voxel_centroids
 
         # Feature aggregation
         pos_embs = self.pos_enc_mlp(norm_points)

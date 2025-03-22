@@ -61,7 +61,28 @@ class PedestrianMapAligner(BaseAligner):
             self.map_pcd = o3d.io.read_point_cloud(os.path.join(scenario_path, 'map.ply'))
 
             if self.use_downsampling:
-                self.map_pcd = self.map_pcd.voxel_down_sample(voxel_size=Reconstuction3DConfig.voxel_size)
+                self.logger.info(f"downsampling with voxel size: {Reconstuction3DConfig.voxel_size}")
+                self.logger.info(f"Map points before downsampling: {len(self.map_pcd.points)}")
+                
+                failed = True
+                trials = 0
+                voxel_size = round(float(Reconstuction3DConfig.voxel_size), 3)
+                while failed and trials < 5:
+                    try:
+                        self.map_pcd = self.map_pcd.voxel_down_sample(voxel_size=voxel_size)
+                        self.logger.info(f"Map points after downsampling: {len(self.map_pcd.points)}")
+                        failed = False
+                    except:
+                        self.logger.error(f"Failed to perform downsampling with voxel size {voxel_size}, increasing by 0.1. Trial {trials + 1}")
+                        voxel_size += 0.1
+                        trials += 1
+                        failed = True
+                
+                if failed:
+                    self.logger.error("Failed to downsample point cloud. Setting original point cloud")
+                    
+
+
 
             for frame, ped_ids in frame_to_peds.items():
                 self.logger.info(f"Processing frame {frame} for pedestrians {ped_ids}")
@@ -196,12 +217,18 @@ class PedestrianMapAligner(BaseAligner):
         if bounding_box_o3d.is_empty() or self.map_pcd.is_empty():
             self.logger.warning(f"Skipping cropping for frame {frame} due to empty bounding box or map point cloud.")
             return None
-
+        
         # Combine pedestrian, car, and map points
-        concat_points = np.concatenate(
-            [np.asarray(obj_ply.points), np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], 
-            axis=0
-        )
+        if len(car_points) == 0:
+            concat_points = np.concatenate(
+                [np.asarray(obj_ply.points), np.asarray(self.map_pcd.points)], 
+                axis=0
+            )    
+        else:
+            concat_points = np.concatenate(
+                [np.asarray(obj_ply.points), np.concatenate(car_points, axis=0), np.asarray(self.map_pcd.points)], 
+                axis=0
+            )
         concat_pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(concat_points))
 
         cropped_pcd = concat_pcd.crop(bounding_box_o3d, invert=False)

@@ -56,7 +56,7 @@ class PedestrianProcessor:
             df_labels3d = pd.DataFrame(labels3d_ndarray[:, :expected_num_columns], columns=self.column_names)
         else:
             print(f"labels3d_ndarray has an unexpected shape: {labels3d_ndarray.shape}")
-            exit(1)
+            # exit(1)
 
         # Ensure numerical columns are correctly typed
         for col in self.numerical_columns:
@@ -68,7 +68,7 @@ class PedestrianProcessor:
         #filter pedistrians according to existence in loki.csv file 
         if df_pedestrians.empty:
             print("No pedestrian data found in this sample.")
-            exit(1)
+            # exit(1)
 
         return df_pedestrians
 
@@ -133,7 +133,7 @@ class PedestrianProcessor:
 
         if not pedestrian_pcds_filtered:
             print("No pedestrians meet the minimum point threshold.")
-            exit(1)
+            # exit(1)
 
         print(f"Number of pedestrians after filtering: {len(pedestrian_pcds_filtered)}")
         return df_pedestrians_filtered, pedestrian_pcds_filtered
@@ -176,7 +176,7 @@ class PointCloudProcessor:
             pcd = convert_from_vertex_to_open3d_pcd(raw_pcd)
         except ValueError as ve:
             print(f"Error converting point cloud: {ve}")
-            exit(1)
+            # exit(1)
 
         print("Downsampling the point cloud...")
         pcd_down = pcd.voxel_down_sample(voxel_size=self.voxel_size)

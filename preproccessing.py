@@ -9,14 +9,15 @@ from reconstruction.modules.utils.logger import Logger
 
 # Constants
 SCRIPT_PATH = Path(__file__).resolve().parent
-LOKI_PATH = SCRIPT_PATH / "LOKI"
+PARENT_PPATH = SCRIPT_PATH.parent
+LOKI_PATH = PARENT_PPATH /"Datasets/loki/loki_data"
 LOG_FILE = SCRIPT_PATH / "logs" / "logs.log"
 THRESHOLD_MULTIPLIER = 0.5
 
 # Output directories
-AVATAR_OUTPUT_DIR = LOKI_PATH / "training_data" / "pedistrian_avatars"
-FEATURES_OUTPUT_DIR = LOKI_PATH / "training_data" / "pedistrian_featuers"
-CONSTRUCTED_OUTPUT_DIR = LOKI_PATH / "training_data" / "3d_constructed"
+AVATAR_OUTPUT_DIR = PARENT_PPATH / "Loki_training_data" / "pedistrian_avatars"
+FEATURES_OUTPUT_DIR = PARENT_PPATH / "Loki_training_data" / "pedistrian_featuers"
+CONSTRUCTED_OUTPUT_DIR = PARENT_PPATH / "Loki_training_data" / "3d_constructed"
 
 # Configure logger
 Logger.configure_unified_file_logging(LOG_FILE)
@@ -55,35 +56,35 @@ def run_pedestrian_map_aligner():
 
 def main():
     try:
-        # Initialize the pedestrian processing pipeline
-        pipeline = PedestrianProcessingPipeline(
-            root_dir=LOKI_PATH,
-            csv_path=LOKI_PATH / "loki.csv",
-            save_dir=AVATAR_OUTPUT_DIR,
-            threshold_multiplier=THRESHOLD_MULTIPLIER,
-        )
+        # # Initialize the pedestrian processing pipeline
+        # pipeline = PedestrianProcessingPipeline(
+        #     root_dir=LOKI_PATH,
+        #     csv_path=LOKI_PATH / "loki.csv",
+        #     save_dir=AVATAR_OUTPUT_DIR,
+        #     threshold_multiplier=THRESHOLD_MULTIPLIER,
+        # )
 
-        # Load and verify scenario and frame IDs
-        scenario_ids, frame_ids = pipeline.load_scenario_frame_ids()
-        valid_scenario_ids = pipeline.verify_scenarios(scenario_ids)
-        valid_frame_ids = pipeline.verify_frames(valid_scenario_ids, frame_ids)
+        # # Load and verify scenario and frame IDs
+        # scenario_ids, frame_ids = pipeline.load_scenario_frame_ids()
+        # valid_scenario_ids = pipeline.verify_scenarios(scenario_ids)
+        # valid_frame_ids = pipeline.verify_frames(valid_scenario_ids, frame_ids)
 
-        # Process frames and crop pedestrians
-        start_time = time.time()
-        df_pedestrians_filtered = pipeline.process_all_frames_and_crop_pedestrians(
-            valid_scenario_ids, valid_frame_ids
-        )
-        df_pedestrians_filtered.to_csv(LOKI_PATH / "avatar_filtered_pedistrians.csv", index=False)
-        logger.info(
-            f"Time taken to process all frames and crop pedestrians: {time.time() - start_time:.2f} seconds"
-        )
+        # # Process frames and crop pedestrians
+        # start_time = time.time()
+        # df_pedestrians_filtered = pipeline.process_all_frames_and_crop_pedestrians(
+        #     valid_scenario_ids, valid_frame_ids
+        # )
+        # df_pedestrians_filtered.to_csv(LOKI_PATH / "avatar_filtered_pedistrians.csv", index=False)
+        # logger.info(
+        #     f"Time taken to process all frames and crop pedestrians: {time.time() - start_time:.2f} seconds"
+        # )
 
-        # Binarize intentions and save the updated CSV
-        df_binarized = load_and_binarize_intention(LOKI_PATH / "avatar_filtered_pedistrians.csv")
-        df_binarized.to_csv(LOKI_PATH / "b_avatar_filtered_pedistrians.csv", index=False)
+        # # Binarize intentions and save the updated CSV
+        # df_binarized = load_and_binarize_intention(LOKI_PATH / "avatar_filtered_pedistrians.csv")
+        # df_binarized.to_csv(LOKI_PATH / "b_avatar_filtered_pedistrians.csv", index=False)
 
-        # Extract pedestrian features
-        extract_pedistrian_featuers(LOKI_PATH, FEATURES_OUTPUT_DIR, AVATAR_OUTPUT_DIR)
+        # # Extract pedestrian features
+        # extract_pedistrian_featuers(LOKI_PATH, FEATURES_OUTPUT_DIR, AVATAR_OUTPUT_DIR)
 
         # Run 3D construction
         run_pedestrian_map_aligner()

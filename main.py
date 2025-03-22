@@ -12,22 +12,22 @@ from features_extraction.Multi_head_attention_layer import MultiHeadAttention
 from DataLoader import get_data_loaders
 
 # Define the paths
-SCRIPT_PATH = Path(__file__).resolve().parent
-LOKI_PATH = SCRIPT_PATH / "LOKI"
+SCRIPT_PATH = Path(__file__).resolve().parent.parent
+LOKI_PATH = SCRIPT_PATH / 'loki_training_data'
 LABEL_CSV_PATH = LOKI_PATH / "b_avatar_filtered_pedistrians.csv"
-PEDESTRIAN_DIR = LOKI_PATH / 'training_data' / 'pedistrian_avatars'
-ENVIRONMENT_DIR = LOKI_PATH / 'training_data' / '3d_constructed'
-FEATURE_DIR = LOKI_PATH / 'training_data' / 'pedistrian_featuers'
+PEDESTRIAN_DIR = LOKI_PATH / 'pedistrian_avatars'
+ENVIRONMENT_DIR = LOKI_PATH / '3d_constructed'
+FEATURE_DIR = LOKI_PATH / 'pedistrian_featuers'
 
 # Global params
-BATCH_SIZE = 32
-EMBED_DIM = 128
+BATCH_SIZE = 8
+EMBED_DIM = 32
 N_EPOCHS = 1
 
 # Params for model (CAV & LWSA)
 KERNEL_SIZE = 3
 NUM_HEADS = 4
-MAX_VOXEL_GRID_SIZE = 1e2
+MAX_VOXEL_GRID_SIZE = int(1e2)
 SPARSE_RATIO = 0.5
 
 # Params for model (multi head attention model)
@@ -37,7 +37,7 @@ f_num_heads = 5
 # Create data loaders
 train_dl, val_dl, test_dl = get_data_loaders(
     PEDESTRIAN_DIR, ENVIRONMENT_DIR, FEATURE_DIR, LABEL_CSV_PATH,
-    batch_size=BATCH_SIZE, train_set_percentage=0.7, val_set_percentage=0.2
+    batch_size=BATCH_SIZE, train_set_percentage=0.7, val_set_percentage=0.15
 )
 
 # init attention model (CAV & LWSA)
@@ -79,7 +79,7 @@ class_weights = torch.tensor(
 
 
 model = AttentionFusionHead(vector_dim=EMBED_DIM, num_heads=NUM_HEADS)  # Initialize your model
-criterion = nn.BCELoss(weight=class_weights)
+criterion = nn.CrossEntropyLoss(weight=class_weights)
 
 parameters = chain(model.parameters(), pcd_attention_model.parameters(), pointnet_model.parameters())
 optimizer = torch.optim.Adam(params=parameters, lr=0.001)
@@ -98,10 +98,17 @@ def train_batch(model, criterion, optimizer):
         source2 = extract_pedestrian_cloud_attention_vectors(batched_avatar_points)
         source3 = extract_pedestrian_features_attention_vectors(batched_pedestrian_features)
 
+        print(source1.shape, source2.shape, source3.shape)
+
         # Forward pass
         outputs = model(source1, source2, source3)
 
         # Compute loss
+        print("target shape:",target.shape)
+        print("outputs shape:",outputs.shape)
+        target = target.view(-1, 1).float()
+        # target = target[:, 0].view(-1, 1).float()
+        print("target after reshape:",target.shape)
         loss = criterion(outputs, target)
 
         # Backward pass
@@ -130,6 +137,7 @@ def val_batch(model, criterion):
         outputs = model(source1, source2, source3)
 
         # Compute loss
+        target = target[:, 0].view(-1, 1).float()
         loss = criterion(outputs, target)
 
         total_loss += loss.item()
