@@ -37,10 +37,10 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         self.intra_pos_mlp = nn.Sequential(
             nn.Linear(3, 3, bias=False),
             nn.BatchNorm1d(3),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(3, in_channels, bias=False),
             nn.BatchNorm1d(in_channels),
-            nn.ReLU(inplace=True),
+            nn.Tanh(),
             nn.Linear(in_channels, in_channels, bias=False),
         )
 
@@ -51,7 +51,7 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         nn.init.normal_(self.inter_pos_enc, mean=0.0, std=1.0)
 
         # Global feature aggregation using adaptive max pooling
-        self.max_pool = nn.AdaptiveMaxPool1d(1)
+        self.avg_pool = nn.AdaptiveAvgPool1d(1)
 
     def forward(self, sparse_x: torch.sparse_coo_tensor, norm_points: torch.Tensor):
         """
@@ -78,7 +78,7 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         # Compute Attention Contribution
         attn_contribution = (F.normalize(q[input_indices], dim=-1) *
                              F.normalize(self.inter_pos_enc[rel_pos_indices].unsqueeze(0), dim=-1)).sum(dim=-1)
-
+       
         # Compute Sparse Attention Weights
         attn = torch.zeros((sparse_x.shape[0], out_coordinates.shape[0], self.num_heads), device=sparse_x.device, dtype=sparse_x.dtype)
 
@@ -114,6 +114,6 @@ class LightweightSelfAttentionLayer(LocalSelfAttentionBase):
         # Output Projection & Global Feature Aggregation
         out_projected = self.to_out(out_F.view(sparse_x.shape[0], -1, self.out_channels))
         out_permuted = out_projected.permute(0, 2, 1)
-        out = self.max_pool(out_permuted).squeeze(-1)
+        out = self.avg_pool(out_permuted).squeeze(-1)
 
         return out, attn

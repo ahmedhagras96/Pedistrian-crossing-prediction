@@ -4,9 +4,10 @@ import pandas as pd
 import numpy as np
 import open3d as o3d
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import Dataset, DataLoader, Subset, WeightedRandomSampler
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 from pathlib import Path
 
 
@@ -148,31 +149,47 @@ class PedestrianPointCloudDataset(Dataset):
 
         # Stack features and labels
         batched_pedestrian_features = torch.stack(pedestrian_features)
-        target = torch.tensor(labels, dtype=torch.int64)
+        target = torch.tensor(labels, dtype=torch.float)
+        # print('collate_fn shapes:', batched_avatar_points.shape, batched_reconstructed_environment.shape, batched_pedestrian_features.shape, target.shape)
+        return ((batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features), target)
 
-        return batched_avatar_points, batched_reconstructed_environment, batched_pedestrian_features, target
+    @staticmethod
+    def stratified_split_dataset(dataset, train_set_percentage, val_set_percentage, csv_path):
+        """
+        Randomly split the dataset into training, validation, and test sets.
 
+        Args:
+            dataset (Dataset): The dataset to split.
+            train_set_percentage (float): Percentage of the dataset to use for training.
+            val_set_percentage (float): Percentage of the dataset to use for validation.
 
-def random_split_dataset(dataset, train_set_percentage, val_set_percentage):
-    """
-    Randomly split the dataset into training, validation, and test sets.
+        Returns:
+            tuple: Training, validation, and test datasets.
+        """
+        labels = pd.read_csv(csv_path)['intended_actions'].values.tolist()
+        indices = np.arange(len(dataset))
 
-    Args:
-        dataset (Dataset): The dataset to split.
-        train_set_percentage (float): Percentage of the dataset to use for training.
-        val_set_percentage (float): Percentage of the dataset to use for validation.
+        train_idx, val_idx = train_test_split(
+            indices, 
+            test_size=val_set_percentage, 
+            stratify=labels, 
+            random_state=42
+        )
 
-    Returns:
-        tuple: Training, validation, and test datasets.
-    """
-    if train_set_percentage + val_set_percentage > 1:
-        raise ValueError("The sum of train_set_percentage and val_set_percentage should not exceed 1.")
-
-    train_length = int(len(dataset) * train_set_percentage)
-    val_length = int(len(dataset) * val_set_percentage)
-    test_length = len(dataset) - train_length - val_length
-
-    return random_split(dataset, [train_length, val_length, test_length])
+        train_set = Subset(dataset, train_idx)
+        val_set = Subset(dataset, val_idx)
+        return train_set, val_set
+    
+    @staticmethod
+    def get_train_sampler(train_set, dataset):
+        # Get the indices of the training subset
+        train_indices = train_set.indices if hasattr(train_set, 'indices') else train_set
+        # Get the labels for the training subset
+        train_labels = [dataset.labels[dataset.pedestrian_ids[i]] for i in train_indices]
+        class_sample_count = np.array([np.sum(np.array(train_labels) == t) for t in [0, 1]])
+        weight = 1. / class_sample_count
+        samples_weight = np.array([weight[int(t)] for t in train_labels])
+        return WeightedRandomSampler(samples_weight, num_samples=len(samples_weight), replacement=True)
 
 
 def get_data_loaders(
@@ -182,7 +199,7 @@ def get_data_loaders(
     label_csv_path,
     batch_size,
     train_set_percentage=0.7,
-    val_set_percentage=0.2,
+    val_set_percentage=0.3,
     shuffle=True,
     drop_last=True,
 ):
@@ -204,16 +221,19 @@ def get_data_loaders(
         tuple: Training, validation, and test DataLoader objects.
     """
     dataset = PedestrianPointCloudDataset(pedestrian_dir, environment_dir, feature_dir, label_csv_path)
-    train_set, val_set, test_set = random_split_dataset(dataset, train_set_percentage, val_set_percentage)
+    train_set, val_set = PedestrianPointCloudDataset.stratified_split_dataset(dataset, train_set_percentage, val_set_percentage, label_csv_path)
 
+    # Create a WeightedRandomSampler for the training set to handle class imbalance
+    train_sampler = dataset.get_train_sampler(train_set, dataset)
+   
     train_loader = DataLoader(
-        train_set, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, collate_fn=dataset.collate_fn
+        train_set, batch_size=batch_size, sampler=train_sampler, shuffle=False, drop_last=drop_last, collate_fn=dataset.collate_fn
     )
     val_loader = DataLoader(
-        val_set, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, collate_fn=dataset.collate_fn
+        val_set, batch_size=batch_size, shuffle=False, drop_last=drop_last, collate_fn=dataset.collate_fn
     )
-    test_loader = DataLoader(
-        test_set, batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, collate_fn=dataset.collate_fn
-    )
+    # test_loader = DataLoader(
+    #     test_set, batch_size=batch_size, shuffle=False, drop_last=drop_last, collate_fn=dataset.collate_fn
+    # )
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader

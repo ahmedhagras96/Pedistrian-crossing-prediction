@@ -12,7 +12,7 @@ class CentroidAwareVoxelization(nn.Module):
     - **Sparse tensor representation**
     """
 
-    def __init__(self, embed_dim: int, max_voxel_grid_size: int):
+    def __init__(self, embed_dim: int, max_voxel_grid_size: int, voxel_size: float):
         """
         Initializes the CentroidAwareVoxelization module.
 
@@ -23,25 +23,26 @@ class CentroidAwareVoxelization(nn.Module):
         super().__init__()
         self.embed_dim = embed_dim
         self.max_voxel_grid_size = max_voxel_grid_size
+        self.voxel_size = voxel_size
 
         # Positional encoding MLP
         self.pos_enc_mlp = nn.Sequential(
             nn.Linear(3, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
-            nn.GELU(),
+            nn.Tanh(),
             nn.Linear(embed_dim, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
-            nn.GELU(),
+            nn.Tanh(),
         )
 
         # Feature aggregation MLP
         self.feature_mlp = nn.Sequential(
             nn.Linear(embed_dim + 6, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
-            nn.GELU(),
+            nn.Tanh(),
             nn.Linear(embed_dim, embed_dim, bias=False),
             nn.BatchNorm1d(embed_dim),
-            nn.GELU(),
+            nn.Tanh(),
         )
 
     @staticmethod
@@ -109,7 +110,7 @@ class CentroidAwareVoxelization(nn.Module):
 
         return voxel_centroids, pooled_features, voxel_indices
 
-    def forward(self, points: torch.Tensor, voxel_size: float = 0.1):
+    def forward(self, points: torch.Tensor):
         """
         Forward pass for centroid-aware voxelization.
 
@@ -119,9 +120,6 @@ class CentroidAwareVoxelization(nn.Module):
                 - `B`: Batch size
                 - `N`: Number of points per batch
                 - `3`: (x, y, z) coordinates
-
-            voxel_size (float, optional):
-                The size of each voxel. Defaults to 0.05.
 
         Returns:
             tuple:
@@ -133,7 +131,7 @@ class CentroidAwareVoxelization(nn.Module):
         """
 
         batch_size, num_points, _ = points.shape
-        device = points.device
+        device = str(points.device)
 
         # Flatten points
         flat_points = points.view(-1, 3)
@@ -142,10 +140,10 @@ class CentroidAwareVoxelization(nn.Module):
         voxel_coords, voxel_point_indices, voxel_point_row_splits, voxel_batch_splits = o3dml.ops.voxelize(
             points=flat_points,
             row_splits=torch.arange(0, (batch_size + 1) * num_points, num_points, device=device, dtype=torch.int64),
-            voxel_size=torch.tensor([voxel_size] * 3, device=device),
+            voxel_size=torch.tensor([self.voxel_size] * 3, device=device),
             points_range_min=flat_points.min(dim=0).values,
-            points_range_max=flat_points.max(dim=0).values,
-            max_points_per_voxel=1000
+            points_range_max=flat_points.max(dim=0).values
+            # max_points_per_voxel=1000
         )
 
         # Compute batch indices
@@ -158,9 +156,10 @@ class CentroidAwareVoxelization(nn.Module):
 
         # Voxel Pooling
         voxel_centroids, pooled_features, voxel_indices = self.voxel_pooling_torch(
-            flat_points, flat_points, voxel_size, method='average'
+            flat_points, flat_points, self.voxel_size, method='average'
         )
 
+        # o3dml.ops.voxel_pooling(position_fn=flat_points, feature_fn=flat_points, voxel_size=)
         # Compute voxel point counts
         voxel_counts = (voxel_point_row_splits[1:] - voxel_point_row_splits[:-1]).unsqueeze(1).float()
 

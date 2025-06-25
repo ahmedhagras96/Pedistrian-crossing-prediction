@@ -3,6 +3,7 @@ import torch
 
 from attention_vector.point_cloud_attn_vector.modules import LightweightSelfAttentionLayer
 from attention_vector.point_cloud_attn_vector.modules import CentroidAwareVoxelization
+from reconstruction.modules.utils.logger import Logger
 
 class PointCloudAttentionModel(nn.Module):
     """
@@ -11,7 +12,9 @@ class PointCloudAttentionModel(nn.Module):
     mechanism optimized for sparse tensors.
     """
 
-    def __init__(self, embed_dim: int, kernel_size: int = 3, num_heads: int = 4, max_voxel_grid_size: int = int(1e5), sparse_ratio: float = 0.5):
+    def __init__(self, embed_dim: int, kernel_size: int = 3,
+                 num_heads: int = 4, max_voxel_grid_size: int = int(1e5), 
+                 sparse_ratio: float = 0.5, voxel_size: float = 1.0):
         """
         Initialize the point cloud attention model.
 
@@ -25,9 +28,14 @@ class PointCloudAttentionModel(nn.Module):
                 Number of attention heads. Defaults to 4.
         """
         super().__init__()
+        self.logger = Logger.get_logger(__name__)
+    
 
         # Initialize Centroid-Aware Voxelization Module
-        self.centroid_aware_voxelization = CentroidAwareVoxelization(embed_dim=embed_dim, max_voxel_grid_size=max_voxel_grid_size)
+        self.centroid_aware_voxelization = CentroidAwareVoxelization(embed_dim=embed_dim,
+            max_voxel_grid_size=max_voxel_grid_size, 
+            voxel_size=voxel_size
+        )
 
         # Initialize Lightweight Self-Attention Layer
         self.attn_layer = LightweightSelfAttentionLayer(
@@ -62,6 +70,11 @@ class PointCloudAttentionModel(nn.Module):
         # Perform centroid-aware voxelization
         (sparse_features,
          norm_points) = self.centroid_aware_voxelization(x)
+                
+        #-----DEBUGGING-----#
+        # self.logger.debug(f"Sparse Features: {sparse_features}-------------\n")
+        # self.logger.debug(f"Normalized Points: {norm_points}-------------\n")
+       #-----DEBUGGING-----#
 
         # Process voxelized sparse features through attention layer
         out, attn_weights = self.attn_layer(sparse_features, norm_points)

@@ -47,7 +47,7 @@ def main():
     # Forward pass
     out, wei = model(points)
 
-    print("Output shape:", out.shape)
+    print("Output shape:", out)
     print("Attention Weights shape:", wei.shape)
     
     # save_attention_results(out, wei, "LOKI/AttOut.json")

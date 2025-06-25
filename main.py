@@ -22,7 +22,7 @@ ENVIRONMENT_DIR = LOKI_PATH / '3d_constructed'
 FEATURE_DIR = LOKI_PATH / 'pedistrian_featuers'
 
 # Global params
-BATCH_SIZE = 8
+BATCH_SIZE = 4
 EMBED_DIM = 32
 N_EPOCHS = 2
 CHECKPOINT_INTERVAL = 1 #Save model every 5 epochs

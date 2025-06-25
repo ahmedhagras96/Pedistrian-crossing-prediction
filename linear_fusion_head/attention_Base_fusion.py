@@ -71,15 +71,17 @@ class AttentionFusionHead(nn.Module):
         """
         super(AttentionFusionHead, self).__init__()
 
-        # Fully connected layers after fusion
-        self.fc1 = nn.Linear(3 * vector_dim, 128)  # Adjusted input size
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, 1)
+        # More fully connected layers for increased complexity
+        self.fc1 = nn.Linear(3 * vector_dim, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 64)
+        self.fc4 = nn.Linear(64, 32)
+        self.fc5 = nn.Linear(32, 16)
+        self.fc6 = nn.Linear(16, 1)
 
         # Activation and dropout
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.2)
-        self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, source1, source2, source3):
         """
@@ -96,10 +98,16 @@ class AttentionFusionHead(nn.Module):
         # Concatenate inputs along the feature dimension
         concatenated_inputs = torch.cat([source1, source2, source3], dim=1)  # (batch_size, 3 * vector_dim)
 
-        # Fully connected layers
+        # More fully connected layers
         x = self.relu(self.fc1(concatenated_inputs))
         x = self.dropout(x)
         x = self.relu(self.fc2(x))
-        output = self.sigmoid(self.fc3(x))  # (batch_size, 1)
+        x = self.dropout(x)
+        x = self.relu(self.fc3(x))
+        x = self.dropout(x)
+        x = self.relu(self.fc4(x))
+        x = self.dropout(x)
+        x = self.relu(self.fc5(x))
+        output = self.fc6(x)  # (batch_size, 1)
 
         return output
