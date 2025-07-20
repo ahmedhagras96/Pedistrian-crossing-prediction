@@ -4,7 +4,8 @@
 
 *.pyc
 *.csv
-
+/loki_training_data
+/checkpoints2
 /LOKI
 /3D_construction/output_directory
 

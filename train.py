@@ -260,6 +260,7 @@ no_improve_epochs = 0
 train_losses, val_losses = [], []
 train_accs, val_accs = [], []
 total_epochs = start_epoch + N_EPOCHS if 'start_epoch' in locals() else N_EPOCHS
+start_epoch = 0 if 'start_epoch' not in locals() else start_epoch
 
 for epoch in range(N_EPOCHS):
     epoch += start_epoch  # Adjust epoch to resume from checkpoint

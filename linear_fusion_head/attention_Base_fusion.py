@@ -80,16 +80,16 @@ class AttentionFusionHead(nn.Module):
         self.fc2 = nn.Linear(256, 128)
         self.bn2 = nn.BatchNorm1d(128)
 
-        self.fc3 = nn.Linear(128, 64)
-        self.bn3 = nn.BatchNorm1d(64)
+        self.fc3 = nn.Linear(128, 128)
+        self.bn3 = nn.BatchNorm1d(128)
 
-        self.fc4 = nn.Linear(64, 32)
-        self.bn4 = nn.BatchNorm1d(32)
+        self.fc4 = nn.Linear(128, 64)
+        self.bn4 = nn.BatchNorm1d(64)
 
-        self.fc5 = nn.Linear(32, 16)
-        self.bn5 = nn.BatchNorm1d(16)
+        self.fc5 = nn.Linear(64, 32)
+        self.bn5 = nn.BatchNorm1d(32)
 
-        self.fc6 = nn.Linear(16, 1)
+        self.fc6 = nn.Linear(32, 1)
 
         # Activation and dropout
         self.activation = nn.LeakyReLU(0.1)
@@ -129,7 +129,7 @@ class AttentionFusionHead(nn.Module):
         x = self.bn3(x)
         x = self.activation(x)
         x = self.dropout(x)
-        x = x + residual  # Residual connection
+        x = x + residual
 
         # Layer 4
         x = self.fc4(x)
