@@ -199,7 +199,7 @@ def get_data_loaders(
     label_csv_path,
     batch_size,
     train_set_percentage=0.7,
-    val_set_percentage=0.3,
+    val_set_percentage=0.2,
     shuffle=True,
     drop_last=True,
 ):

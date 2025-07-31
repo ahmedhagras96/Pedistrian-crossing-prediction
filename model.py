@@ -12,7 +12,7 @@ class PedestrianCrossingFusionNet(nn.Module):
     using multi-head attention and a lightweight self-attention mechanism.
     """
 
-    def __init__(self, embed_dim=64, num_heads=4, kernel_size=3, max_voxel_grid_size=int(1e5), sparse_ratio=0.5, voxel_size=1.0, feature_dim=5, feature_num_heads=5):
+    def __init__(self, embed_dim=64, num_heads=4, kernel_size=3, max_voxel_grid_size=int(1e5), sparse_ratio=0.5, voxel_size=1.0, feature_dim=5, feature_num_heads=5, dropout_rate=0.3):
         super(PedestrianCrossingFusionNet, self).__init__()
         
         # Feature extractor for pedestrian point clouds
@@ -32,7 +32,7 @@ class PedestrianCrossingFusionNet(nn.Module):
         self.multi_head_attention = MultiHeadAttention(input_dim=feature_dim, num_heads=feature_num_heads, output_dim=embed_dim)
         
         # Fusion head for final classification
-        self.fusion_head = AttentionFusionHead(vector_dim=embed_dim, num_heads=num_heads)
+        self.fusion_head = AttentionFusionHead(vector_dim=embed_dim, num_heads=num_heads, dropout_rate=dropout_rate)
 
     def forward(self, input_data):
         
