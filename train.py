@@ -8,7 +8,7 @@ import numpy as np
 from pathlib import Path
 from itertools import chain
 from tqdm import tqdm
-from torcheval.metrics import BinaryAccuracy, BinaryAUROC, BinaryF1Score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from torch_lr_finder import LRFinder
 
 # Custom module imports
@@ -122,14 +122,6 @@ train_dl, val_dl = get_data_loaders(
 # avatar, env, feats = inputs
 # print("train_dl batch shapes:", avatar.shape, env.shape, feats.shape, target.shape)
 
-# Initialize metrics
-train_metric = BinaryAccuracy(device=device)
-val_metric = BinaryAccuracy(device=device)
-train_auc = BinaryAUROC(device=device)
-val_auc = BinaryAUROC(device=device)
-train_f1 = BinaryF1Score(device=device)
-val_f1 = BinaryF1Score(device=device)
-
 # ----------------------------
 # Class Weights
 # ----------------------------
@@ -188,23 +180,14 @@ def set_models_mode(mode):
 def run_epoch(data_loader, is_train=True):
     """Run one epoch of training or validation"""
     set_models_mode('train' if is_train else 'eval')
-    metric = train_metric if is_train else val_metric
-    f1_metric = train_f1 if is_train else val_f1
-    auc_metric = train_auc if is_train else val_auc
-    metric.reset()
-    f1_metric.reset()
-    auc_metric.reset()
-    
+
     total_loss = 0.0
     total_samples = 0
-    prediction_counts = {
-        "crossing": 0,
-        'not_crossing': 0
-    }
-    target_counts = {
-        "crossing": 0,
-        'not_crossing': 0
-    }
+    prediction_counts = {"crossing": 0, 'not_crossing': 0}
+    target_counts = {"crossing": 0, 'not_crossing': 0}
+
+    all_preds = []
+    all_targets = []
 
     with torch.set_grad_enabled(is_train):
         for inputs, target in tqdm(data_loader, desc="Training" if is_train else "Validation", leave=False):
@@ -213,44 +196,46 @@ def run_epoch(data_loader, is_train=True):
 
             outputs = model((avatar, env, feats))
             loss = compute_loss(outputs, target)
-            
+
             acc_out = torch.sigmoid(outputs).squeeze()
+            preds = (acc_out > 0.5).int()
 
             # Count predictions
-            preds = (acc_out > 0.5)
             prediction_counts['crossing'] += int(preds.sum().item())
-            prediction_counts['not_crossing'] += int((~preds).sum().item())
+            prediction_counts['not_crossing'] += int((~preds.bool()).sum().item())
             # Count targets
             target_counts['crossing'] += (target == 1).sum().item()
             target_counts['not_crossing'] += (target == 0).sum().item()
-            # #-----DEBUGGING-----#
-            # logger.debug(f'acc_out{acc_out}')
-            # logger.debug(f'target{target}')
-            # logger.debug(f'Attention vector of PCD: {src1}-----------------\n')
-            # logger.debug(f'Attention vector of AVATAR: {src2}-----------------\n')
-            # logger.debug(f'Attention vector of FEATURES: {src3}-----------------\n')
-            # logger.debug(f'Fused Attention Vectors: {outputs.squeeze()}-----------------\n')
-            # logger.debug(f'Targets: {target}-----------------\n')
-            #-----DEBUGGING-----#
-            
+
             if is_train:
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(parameters, max_norm=1.0)
                 optimizer.step()
                 optimizer.zero_grad()
-                
-            # Update metrics
-            metric.update(acc_out, target)
-            f1_metric.update(acc_out, target)
-            auc_metric.update(acc_out, target)
+
+            # Accumulate for sklearn metrics
+            all_preds.extend(acc_out.detach().cpu().numpy())
+            all_targets.extend(target.detach().cpu().numpy())
+
             total_loss += loss.item() * target.size(0)
             total_samples += target.size(0)
 
-    avg_loss = total_loss / total_samples
-    accuracy = metric.compute().item()
-    f1 = f1_metric.compute().item()
-    auc = auc_metric.compute().item()
-    return avg_loss, accuracy, f1, auc, prediction_counts, target_counts
+    # Convert to numpy arrays
+    all_preds = np.array(all_preds)
+    all_targets = np.array(all_targets)
+    bin_preds = (all_preds > 0.5).astype(int)
+
+    # Compute metrics
+    accuracy = accuracy_score(all_targets, bin_preds)
+    f1 = f1_score(all_targets, bin_preds)
+    weighted_f1 = f1_score(all_targets, bin_preds, average='weighted')
+    try:
+        auc = roc_auc_score(all_targets, all_preds)
+    except ValueError:
+        auc = float('nan')  # Handle case with only one class present
+
+    return total_loss / total_samples, accuracy, f1, auc, prediction_counts, target_counts, weighted_f1
+
 
 # ----------------------------
 # Main Training Loop
@@ -269,12 +254,12 @@ for epoch in range(N_EPOCHS):
     logger.info(f"\nEpoch {epoch+1}/{total_epochs}")
     
     # Training phase
-    train_loss, train_acc, trn_f1, trn_auc, train_cnts, tar_trn_cnts = run_epoch(train_dl, is_train=True)
+    train_loss, train_acc, trn_f1, trn_auc, train_cnts, tar_trn_cnts, trn_w_f1 = run_epoch(train_dl, is_train=True)
     train_losses.append(train_loss)
     train_accs.append(train_acc)
     
     # Validation phase
-    val_loss, val_acc, vl_f1, vl_auc, val_cnts, tar_val_cnts = run_epoch(val_dl, is_train=False)
+    val_loss, val_acc, vl_f1, vl_auc, val_cnts, tar_val_cnts, val_w_f1 = run_epoch(val_dl, is_train=False)
     val_losses.append(val_loss)
     val_accs.append(val_acc)
     
@@ -288,6 +273,7 @@ for epoch in range(N_EPOCHS):
         f"  Loss         : {train_loss:.4f}\n"
         f"  Accuracy     : {train_acc:.2%}\n"
         f"  F1 Score     : {trn_f1:.2%}\n"
+        f"  Weighted F1  : {trn_w_f1:.2%}\n"
         f"  AUC          : {trn_auc:.2%}\n"
         f"  Targets      : Crossing={tar_trn_cnts['crossing']}, Not Crossing={tar_trn_cnts['not_crossing']}\n"
         f"  Predictions  : Crossing={train_cnts['crossing']}, Not Crossing={train_cnts['not_crossing']}\n"
@@ -295,6 +281,7 @@ for epoch in range(N_EPOCHS):
         f"  Loss         : {val_loss:.4f}\n"
         f"  Accuracy     : {val_acc:.2%}\n"
         f"  F1 Score     : {vl_f1:.2%}\n"
+        f"  Weighted F1  : {val_w_f1:.2%}\n"
         f"  AUC          : {vl_auc:.2%}\n"
         f"  Targets      : Crossing={tar_val_cnts['crossing']}, Not Crossing={tar_val_cnts['not_crossing']}\n"
         f"  Predictions  : Crossing={val_cnts['crossing']}, Not Crossing={val_cnts['not_crossing']}\n"
