@@ -125,18 +125,19 @@ train_dl, val_dl = get_data_loaders(
 # ----------------------------
 # Class Weights
 # ----------------------------
-try:
-    label_data = pd.read_csv(LABEL_CSV_PATH)
-    class_counts = label_data['intended_actions'].value_counts()
-    num_neg, num_pos = class_counts.get(0, 1), class_counts.get(1, 1)
-    logger.info(f"Class counts: Negative: {num_neg}, Positive: {num_pos}")
-    class_weight_value = num_neg / num_pos
-    class_weights = torch.tensor([class_weight_value], dtype=torch.float).to(device)
-    logger.info(f"Class weights computed: {class_weights.tolist()}")
-    criterion = nn.BCEWithLogitsLoss(pos_weight=class_weights)
-except Exception as e:
-    criterion = nn.BCEWithLogitsLoss()
-    logger.warning(f"Warning: Could not compute class weights due to: {e}")
+# try:
+#     label_data = pd.read_csv(LABEL_CSV_PATH)
+#     class_counts = label_data['intended_actions'].value_counts()
+#     num_neg, num_pos = class_counts.get(0, 1), class_counts.get(1, 1)
+#     logger.info(f"Class counts: Negative: {num_neg}, Positive: {num_pos}")
+#     class_weight_value = num_neg / num_pos
+#     class_weights = torch.tensor([class_weight_value], dtype=torch.float).to(device)
+#     logger.info(f"Class weights computed: {class_weights.tolist()}")
+#     criterion = nn.BCEWithLogitsLoss(pos_weight=class_weights)
+# except Exception as e:
+#     criterion = nn.BCEWithLogitsLoss()
+#     logger.warning(f"Warning: Could not compute class weights due to: {e}")
+criterion = nn.BCEWithLogitsLoss()
 
 # ----------------------------
 # Learning Rate Finder & Optimizer Adjustment

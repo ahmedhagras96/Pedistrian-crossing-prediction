@@ -13,7 +13,7 @@ class AttentionFusionHead(nn.Module):
         super(AttentionFusionHead, self).__init__()
 
         # More fully connected layers for increased complexity
-        input_dim = 3 * vector_dim
+        input_dim = 1 * vector_dim
 
         self.fc1 = nn.Linear(input_dim, 256)
         self.bn1 = nn.BatchNorm1d(256)
@@ -36,7 +36,7 @@ class AttentionFusionHead(nn.Module):
         self.activation = nn.LeakyReLU(0.1)
         self.dropout = nn.Dropout(dropout_rate)
 
-    def forward(self, source1, source2, source3):
+    def forward(self, source1):
         """
         Forward pass of the network.
 
@@ -49,7 +49,7 @@ class AttentionFusionHead(nn.Module):
             torch.Tensor: Binary classification output (batch_size, 1).
         """
         # Concatenate inputs along the feature dimension
-        x = torch.cat([source1, source2, source3], dim=1)  # (batch_size, 3 * vector_dim)
+        x = torch.cat([source1], dim=1)  # (batch_size, 3 * vector_dim)
 
         # More fully connected layers
         # Layer 1
