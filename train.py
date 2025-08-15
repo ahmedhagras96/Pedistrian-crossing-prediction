@@ -21,12 +21,12 @@ from reconstruction.modules.utils.logger import Logger
 # Hyperparameters
 # ----------------------------
 BATCH_SIZE = 4
-EMBED_DIM = 16
-N_EPOCHS = 30
+EMBED_DIM = 64
+N_EPOCHS = 5
 CHECKPOINT_INTERVAL = 1
-KERNEL_SIZE = 5
+KERNEL_SIZE = 7
 NUM_HEADS = 4
-MAX_VOXEL_GRID_SIZE = int(1e2)
+MAX_VOXEL_GRID_SIZE = int(1e3)
 SPARSE_RATIO = 1.0
 F_INPUT_DIM = 5
 F_NUM_HEADS = 5

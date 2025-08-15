@@ -36,19 +36,19 @@ class PedestrianCrossingFusionNet(nn.Module):
 
     def forward(self, input_data):
         
-        pedestrian_pc, _, _ = input_data
+        _, environment_pc, _ = input_data
 
         # Extract features from pedestrian point clouds
-        pedestrian_features = self.pointnet_feature_extractor(pedestrian_pc)
+        # pedestrian_features = self.pointnet_feature_extractor(pedestrian_pc)
         
         # Apply attention to pedestrian point clouds
-        # environment_attention_output = self.point_cloud_attention_model(environment_pc)[0]
+        environment_attention_output = self.point_cloud_attention_model(environment_pc)[0]
         
         # Apply multi-head attention to fuse pedestrian and environment features
         # fused_features = self.multi_head_attention(features)[0]
         
         # Final fusion head for classification
-        output = self.fusion_head(pedestrian_features)
+        output = self.fusion_head(environment_attention_output)
 
         return output
     
