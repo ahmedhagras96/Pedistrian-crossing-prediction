@@ -90,7 +90,7 @@ if os.path.exists("checkpoints2"):
 # Config & Paths 
 # ----------------------------
 SCRIPT_PATH = Path(__file__).resolve().parent
-LOKI_PATH = SCRIPT_PATH / 'loki_training_data'
+LOKI_PATH = SCRIPT_PATH.parent / 'loki_training_data'
 LABEL_CSV_PATH = LOKI_PATH / "b_avatar_filtered_pedestrians.csv"  
 PEDESTRIAN_DIR = LOKI_PATH / 'pedestrian_avatars'  
 ENVIRONMENT_DIR = LOKI_PATH / '3d_constructed'
@@ -98,7 +98,7 @@ FEATURE_DIR = LOKI_PATH / 'pedestrian_features'
 CHECKPOINT_DIR = SCRIPT_PATH / "checkpoints2"
 CHECKPOINT_DIR.mkdir(exist_ok=True)
 BEST_MODEL_PATH = CHECKPOINT_DIR / "best_model.pth"
-LOG_FILE = LOKI_PATH / 'train_log.log'
+LOG_FILE = LOKI_PATH / 'train_log_extra_feats.log'
 PLOT_PATH = LOKI_PATH / 'training_curves.png'
 
 # ----------------------------
